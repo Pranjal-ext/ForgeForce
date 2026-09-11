@@ -1,2 +1,2 @@
 # ForgeForce
-An Interactive physics simulation sandbox
+An Interactive Newtonian physics simulation sandbox
