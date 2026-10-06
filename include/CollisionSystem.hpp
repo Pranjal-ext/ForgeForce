@@ -7,85 +7,7 @@
 #include <cmath>
 #include <algorithm>
 
-// ============================================================
-// Vector2D
-// 2D vector with arithmetic, dot product, length and safe
-// normalization (returns a zero vector instead of dividing by 0).
-// ============================================================
-struct Vector2D {
-    float x = 0.0f;
-    float y = 0.0f;
-
-    Vector2D() = default;
-    Vector2D(float x, float y) : x(x), y(y) {}
-
-    Vector2D operator+(const Vector2D& other) const { return { x + other.x, y + other.y }; }
-    Vector2D operator-(const Vector2D& other) const { return { x - other.x, y - other.y }; }
-    Vector2D operator*(float scalar) const { return { x * scalar, y * scalar }; }
-    Vector2D operator-() const { return { -x, -y }; }
-
-    Vector2D& operator+=(const Vector2D& other) { x += other.x; y += other.y; return *this; }
-    Vector2D& operator-=(const Vector2D& other) { x -= other.x; y -= other.y; return *this; }
-
-    float dot(const Vector2D& other) const { return x * other.x + y * other.y; }
-    float cross(const Vector2D& other) const { return x * other.y - y * other.x; }
-    float lengthSquared() const { return x * x + y * y; }
-    float length() const { return std::sqrt(lengthSquared()); }
-
-    Vector2D normalized() const {
-        float len = length();
-        if (len < 1e-6f) return { 0.0f, 0.0f }; // no meaningful direction
-        return { x / len, y / len };
-    }
-};
-
-// ============================================================
-// Shape types
-// The numeric values are written to scene files, so the order
-// must not change (Circle = 0, Box = 1, Polygon = 2).
-// ============================================================
-enum class ShapeType { Circle, Box, Polygon };
-
-// ============================================================
-// Body
-// One simulated object. Which shape fields are used depends on
-// shapeType:
-//   Circle  -> radius
-//   Box     -> halfExtents (axis-aligned)
-//   Polygon -> localVertices (convex, ordered, relative to position)
-// ============================================================
-struct Body {
-    Vector2D position;
-    Vector2D velocity;
-
-    float mass = 1.0f;
-    float invMass = 1.0f; // 1 / mass; 0 means static (walls, floor)
-
-    ShapeType shapeType = ShapeType::Circle;
-
-    float radius = 10.0f;
-    Vector2D halfExtents{ 10.0f, 10.0f };
-    std::vector<Vector2D> localVertices;
-
-    // Sets mass and keeps invMass consistent; mass <= 0 makes the body static
-    void setMass(float newMass);
-
-    Vector2D boxMin() const { return position - halfExtents; }
-    Vector2D boxMax() const { return position + halfExtents; }
-
-    // World-space bounding box for any shape type
-    Vector2D aabbMin() const;
-    Vector2D aabbMax() const;
-
-    // Distance from position to the furthest point of the shape
-    float boundingRadius() const;
-
-    // World-space corners for Box and Polygon (empty for Circle)
-    std::vector<Vector2D> worldVertices() const;
-
-    // True if the point lies inside the shape
-    bool containsPoint(const Vector2D& point) const;
-};
+#include "Body.hpp"
 
 // ============================================================
 // Manifold
@@ -164,9 +86,12 @@ public:
     void step(std::vector<Body>& bodies);
 
     void setRestitution(float value) { restitution = value; }
+    float getRestitution() const { return restitution; }
     // Should exceed gravity * timestep, e.g. 2 * gravity / 60 at 60 FPS
     void setRestitutionThreshold(float value) { restitutionThreshold = value; }
+    float getRestitutionThreshold() const { return restitutionThreshold; }
     void setFriction(float value) { friction = value; }
+    float getFriction() const { return friction; }
     void setSleepThreshold(float value) { sleepThreshold = value; }
     // More iterations give more stable stacks at a small CPU cost
     void setSolverIterations(int value) { solverIterations = std::max(1, value); }
