@@ -2,3 +2,6 @@
 *.o
 *.out
 build/
+run_tests
+forceforge
+scene.txt
