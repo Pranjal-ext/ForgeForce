@@ -4,16 +4,14 @@
 
 #include "WorldState.hpp"
 
-// ============================================================
 // Demo presets
 // Each preset builds a complete scene (bodies and settings)
 // that demonstrates one physical idea.
-// ============================================================
 enum class Preset {
-    Projectile = 1,      // launch at an angle, compare range with v^2 sin(2a) / g
-    ElasticCollision,    // equal masses, e = 1: velocities swap
-    InelasticCollision,  // masses 4 and 1, e = 0: they move off together
-    FreeFall             // different masses dropped together, no drag: they land together
+  Projectile = 1, // launch at an angle, compare range with v^2 sin(2a) / g
+  ElasticCollision, // equal masses, e = 1: velocities swap
+  InelasticCollision, // masses 4 and 1, e = 0: they move off together
+  FreeFall // different masses dropped together, no drag: they land together
 };
 
 constexpr int PRESET_COUNT = 4;

@@ -2,5 +2,5 @@
 #include "InteractionRenderer.hpp"
 
 int main() {
-    return sandbox::run();
+  return sandbox::run();
 }
