@@ -56,5 +56,5 @@ Prerequisites: A C++17 compiler and SFML 3.0 installed on your system.
 
 1. Download the ZIP from the ForceForge GitHub repo.
 2. Extract it into a folder and open that folder in VS Code.
-3. Run the tests to verify your setup.
-4. Run the simulator.
+3. Run the tests to verify your setup, using the command : g++ -std=c++17 -Iinclude tests/test_main.cpp src/Body.cpp src/CollisionSystem.cpp src/ForceGenerator.cpp src/Integrator.cpp src/SceneHistory.cpp src/EventQueue.cpp src/Scenarios.cpp src/World.cpp src/InteractionRenderer.cpp -lsfml-graphics -lsfml-window -lsfml-system -o run_tests; ./run_tests
+4. Run the simulator, using the command : g++ -std=c++17 -Iinclude src/main.cpp src/Body.cpp src/CollisionSystem.cpp src/ForceGenerator.cpp src/Integrator.cpp src/SceneHistory.cpp src/EventQueue.cpp src/Scenarios.cpp src/World.cpp src/InteractionRenderer.cpp -lsfml-graphics -lsfml-window -lsfml-system -o forceforge; ./forceforge
