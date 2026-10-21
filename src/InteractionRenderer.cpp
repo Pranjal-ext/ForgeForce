@@ -49,6 +49,21 @@ std::string shapeName(SpawnShape shape) {
   return "Unknown";
 }
 
+void clampLaunchSettings(AppSettings& settings) {
+  settings.launchAngleDegrees = std::fmod(settings.launchAngleDegrees, 360.0f);
+  if (settings.launchAngleDegrees < 0.0f) settings.launchAngleDegrees += 360.0f;
+
+  settings.launchSpeed = std::clamp(settings.launchSpeed, MIN_LAUNCH_SPEED, MAX_LAUNCH_SPEED);
+  settings.launchMass = std::clamp(settings.launchMass, MIN_BODY_MASS, MAX_BODY_MASS);
+}
+
+Body createLaunchedBody(const Vector2D& position, const AppSettings& settings) {
+  Body body = createShape(position, settings.currentShape, settings.spawnSize);
+  body.setMass(settings.launchMass);
+  body.velocity = launchVelocity(settings.launchAngleDegrees, settings.launchSpeed);
+  return body;
+}
+
 
 // Drawing
 
