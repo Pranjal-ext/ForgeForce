@@ -116,7 +116,24 @@ void drawBody(sf::RenderWindow& window, const Body& body) {
     box.setOutlineThickness(body.isStatic() ? 0.0f : 1.5f);
     window.draw(box);
   }
+ else if (body.shapeType == ShapeType::Polygon) {
+    sf::ConvexShape polygon;
+    polygon.setPointCount(body.localVertices.size());
+    for (std::size_t i = 0; i < body.localVertices.size(); ++i) {
+      polygon.setPoint(i, toSFML(body.localVertices[i]));
+    }
+    polygon.setPosition(toSFML(body.position));
+    polygon.setFillColor(body.isStatic() ? staticColor : sf::Color(170, 110, 255));
+    polygon.setOutlineColor(sf::Color::White);
+    polygon.setOutlineThickness(1.5f);
+    window.draw(polygon);
+  }
+}
 
+void drawSpring(sf::RenderWindow& window, const SpringForce& spring, const std::vector<Body>& bodies) {
+  // remains for compatibility with the saved run() code and tests
+  (void)window; (void)spring; (void)bodies;
+}
 
 
 void drawVelocityVector(sf::RenderWindow& window, const Body& body) {
