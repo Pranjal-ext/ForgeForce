@@ -12,67 +12,7 @@ namespace sandbox {
 
 // Conversions, shape creation and launch values
 
-sf::Vector2f toSFML(const Vector2D& v) {
-  return sf::Vector2f(v.x, v.y);
-}
 
-namespace {
-
-Vector2D toWorld(const sf::RenderWindow& window, const sf::Vector2i& pixel) {
-  sf::Vector2f p = window.mapPixelToCoords(pixel);
-  return { p.x, p.y };
-}
-
-std::string fixed(float value, int decimals) {
-  std::ostringstream s;
-  s << std::fixed << std::setprecision(decimals) << value;
-  return s.str();
-}
-
-} // namespace
-
-Body createShape(const Vector2D& position, SpawnShape shape, float size) {
-  switch (shape) {
-    case SpawnShape::Circle: return Body::makeCircle(position, size);
-    case SpawnShape::Triangle: return Body::makeRegularPolygon(position, 3, size);
-    case SpawnShape::Square: return Body::makeRegularPolygon(position, 4, size);
-  }
-  return Body::makeCircle(position, size);
-}
-
-std::string shapeName(SpawnShape shape) {
-  switch (shape) {
-    case SpawnShape::Circle: return "Circle";
-    case SpawnShape::Triangle: return "Triangle";
-    case SpawnShape::Square: return "Square";
-  }
-  return "Unknown";
-}
-
-void clampLaunchSettings(AppSettings& settings) {
-  settings.launchAngleDegrees = std::fmod(settings.launchAngleDegrees, 360.0f);
-  if (settings.launchAngleDegrees < 0.0f) settings.launchAngleDegrees += 360.0f;
-
-  settings.launchSpeed = std::clamp(settings.launchSpeed, MIN_LAUNCH_SPEED, MAX_LAUNCH_SPEED);
-  settings.launchMass = std::clamp(settings.launchMass, MIN_BODY_MASS, MAX_BODY_MASS);
-}
-
-Body createLaunchedBody(const Vector2D& position, const AppSettings& settings) {
-  Body body = createShape(position, settings.currentShape, settings.spawnSize);
-  body.setMass(settings.launchMass);
-  body.velocity = launchVelocity(settings.launchAngleDegrees, settings.launchSpeed);
-  return body;
-}
-
-void readBodyIntoSettings(const Body& body, AppSettings& settings) {
-  settings.launchMass = body.mass;
-  settings.launchSpeed = body.velocity.length();
-  if (settings.launchSpeed > 1.0f) {
-    settings.launchAngleDegrees =
-      std::atan2(-body.velocity.y, body.velocity.x) * 180.0f / 3.14159265f;
-  }
-  clampLaunchSettings(settings);
-}
 
 // Drawing
 
