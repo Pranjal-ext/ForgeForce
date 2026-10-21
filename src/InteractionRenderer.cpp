@@ -709,4 +709,25 @@ int run() {
     float frameTime = clock.restart().asSeconds();
     if (!settings.paused) world.update(frameTime);
 
-   
+  // 5. Drawing: springs underneath, then bodies, then the overlay text
+    window.clear(sf::Color(20, 22, 30));
+
+    for (const SpringForce& spring : world.getSprings()) {
+      drawSpring(window, spring, world.getBodies());
+    }
+
+    for (const Body& body : world.getBodies()) {
+      drawBody(window, body);
+      if (body.isStatic()) continue;
+      if (settings.showVelocityVectors) drawVelocityVector(window, body);
+      if (settings.showBodyInfo) drawBodyInfo(window, body, font);
+    }
+
+    drawStatus(window, font, settings, world);
+    window.display();
+  }
+
+  return 0;
+}
+
+} // namespace sandbox 
