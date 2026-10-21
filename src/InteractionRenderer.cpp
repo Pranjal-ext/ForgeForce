@@ -62,6 +62,14 @@ Body createLaunchedBody(const Vector2D& position, const AppSettings& settings) {
   body.setMass(settings.launchMass);
   body.velocity = launchVelocity(settings.launchAngleDegrees, settings.launchSpeed);
   return body;
+}void readBodyIntoSettings(const Body& body, AppSettings& settings) {
+  settings.launchMass = body.mass;
+  settings.launchSpeed = body.velocity.length();
+  if (settings.launchSpeed > 1.0f) {
+    settings.launchAngleDegrees =
+      std::atan2(-body.velocity.y, body.velocity.x) * 180.0f / 3.14159265f;
+  }
+  clampLaunchSettings(settings);
 }
 
 
