@@ -74,6 +74,49 @@ Body createLaunchedBody(const Vector2D& position, const AppSettings& settings) {
 
 
 // Drawing#code
+namespace {
+
+sf::Vertex makeVertex(const Vector2D& position, const sf::Color& color) {
+  sf::Vertex vertex;
+  vertex.position = toSFML(position);
+  vertex.color = color;
+  return vertex;
+}
+
+} // namespace
+
+sf::Text makeText(const sf::Font& font, const std::string& content, unsigned int size) {
+#if SFML_VERSION_MAJOR >= 3
+  sf::Text text(font, content, size);
+#else
+  sf::Text text(content, font, size);
+#endif
+  text.setFillColor(sf::Color::White);
+  return text;
+}
+
+void drawBody(sf::RenderWindow& window, const Body& body) {
+  const sf::Color staticColor(90, 95, 110);
+
+  if (body.shapeType == ShapeType::Circle) {
+    sf::CircleShape circle(body.radius);
+    circle.setOrigin(sf::Vector2f(body.radius, body.radius));
+    circle.setPosition(toSFML(body.position));
+    circle.setFillColor(body.isStatic() ? staticColor : sf::Color(90, 160, 255));
+    circle.setOutlineColor(sf::Color::White);
+    circle.setOutlineThickness(1.5f);
+    window.draw(circle);
+  }
+  else if (body.shapeType == ShapeType::Box) {
+    sf::RectangleShape box(sf::Vector2f(body.halfExtents.x * 2.0f, body.halfExtents.y * 2.0f));
+    box.setOrigin(toSFML(body.halfExtents));
+    box.setPosition(toSFML(body.position));
+    box.setFillColor(body.isStatic() ? staticColor : sf::Color(255, 150, 70));
+    box.setOutlineColor(sf::Color::White);
+    box.setOutlineThickness(body.isStatic() ? 0.0f : 1.5f);
+    window.draw(box);
+  }
+
 
 
 void drawVelocityVector(sf::RenderWindow& window, const Body& body) {
