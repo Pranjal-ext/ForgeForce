@@ -12,6 +12,42 @@ namespace sandbox {
 
 // Conversions, shape creation and launch values
 
+sf::Vector2f toSFML(const Vector2D& v) {
+  return sf::Vector2f(v.x, v.y);
+}
+
+namespace {
+
+Vector2D toWorld(const sf::RenderWindow& window, const sf::Vector2i& pixel) {
+  sf::Vector2f p = window.mapPixelToCoords(pixel);
+  return { p.x, p.y };
+}
+
+std::string fixed(float value, int decimals) {
+  std::ostringstream s;
+  s << std::fixed << std::setprecision(decimals) << value;
+  return s.str();
+}
+
+} // namespace
+
+Body createShape(const Vector2D& position, SpawnShape shape, float size) {
+  switch (shape) {
+    case SpawnShape::Circle: return Body::makeCircle(position, size);
+    case SpawnShape::Triangle: return Body::makeRegularPolygon(position, 3, size);
+    case SpawnShape::Square: return Body::makeRegularPolygon(position, 4, size);
+  }
+  return Body::makeCircle(position, size);
+}
+
+std::string shapeName(SpawnShape shape) {
+  switch (shape) {
+    case SpawnShape::Circle: return "Circle";
+    case SpawnShape::Triangle: return "Triangle";
+    case SpawnShape::Square: return "Square";
+  }
+  return "Unknown";
+}
 
 
 // Drawing
