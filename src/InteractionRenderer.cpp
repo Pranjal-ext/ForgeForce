@@ -10,7 +10,7 @@
 
 namespace sandbox {
 
-// Conversions, shape creation and launch values
+// Conversions, shape creation and launch values...#code1
 
 sf::Vector2f toSFML(const Vector2D& v) {
   return sf::Vector2f(v.x, v.y);
@@ -62,9 +62,7 @@ Body createLaunchedBody(const Vector2D& position, const AppSettings& settings) {
   body.setMass(settings.launchMass);
   body.velocity = launchVelocity(settings.launchAngleDegrees, settings.launchSpeed);
   return body;
-}
-
-void readBodyIntoSettings(const Body& body, AppSettings& settings) {
+}void readBodyIntoSettings(const Body& body, AppSettings& settings) {
   settings.launchMass = body.mass;
   settings.launchSpeed = body.velocity.length();
   if (settings.launchSpeed > 1.0f) {
@@ -74,8 +72,8 @@ void readBodyIntoSettings(const Body& body, AppSettings& settings) {
   clampLaunchSettings(settings);
 }
 
-// Drawing
 
+// Drawing#code
 namespace {
 
 sf::Vertex makeVertex(const Vector2D& position, const sf::Color& color) {
@@ -118,7 +116,7 @@ void drawBody(sf::RenderWindow& window, const Body& body) {
     box.setOutlineThickness(body.isStatic() ? 0.0f : 1.5f);
     window.draw(box);
   }
-  else if (body.shapeType == ShapeType::Polygon) {
+ else if (body.shapeType == ShapeType::Polygon) {
     sf::ConvexShape polygon;
     polygon.setPointCount(body.localVertices.size());
     for (std::size_t i = 0; i < body.localVertices.size(); ++i) {
@@ -133,10 +131,10 @@ void drawBody(sf::RenderWindow& window, const Body& body) {
 }
 
 void drawSpring(sf::RenderWindow& window, const SpringForce& spring, const std::vector<Body>& bodies) {
-  // Springs are no longer part of the user interface, but the function signature
   // remains for compatibility with the saved run() code and tests
   (void)window; (void)spring; (void)bodies;
 }
+
 
 void drawVelocityVector(sf::RenderWindow& window, const Body& body) {
   const Vector2D velocity = body.velocity;
@@ -244,26 +242,26 @@ void drawStatus(sf::RenderWindow& window, const sf::Font& font,
   // SHOW INSTRUCTIONS ONLY IF TOGGLED ON
   if (settings.showInstructions) {
     status << "\n=== FIRE & SPAWN ===\n";
-    status << "  Space: Fire from launcher    Click empty space: Spawn\n";
+    status << "  Space: Fire from launcher Click empty space: Spawn\n";
 
     status << "\n=== ADJUST VALUES ===\n";
-    status << "  Up/Down: angle    Left/Right: speed    +/-: mass\n";
+    status << "  Up/Down: angle  Left/Right: speed   +/-: mass\n";
     status << "  Hold Shift for fine control\n";
 
-    status << "\n=== SELECT & EDIT ===\n";
-    status << "  Click body: select (loads values)    Enter: apply    Del: remove\n";
+    status << "\n=== SELECT &    EDIT ===\n";
+    status << "  Click body:  select (loads values)     Enter: apply   Del: remove\n";
 
     status << "\n=== SHAPES (1-3) ===\n";
-    status << "  1: Circle    2: Triangle    3: Square\n";
+    status << "  1: Circle  2: Triangle  3: Square\n";
 
     status << "\n=== PRESETS (F1-F4) ===\n";
-    status << "  F1 Projectile  F2 Elastic  F3 Inelastic  F4 Free fall\n";
+    status << "  F1 Projectile F2 Elastic F3 Inelastic  F4 Free fall\n";
 
     status << "\n=== CONTROL ===\n";
-    status << "  P: Pause    R: Reset    V: Vectors    I: Info    H: Help (toggle)\n";
-    status << "  Ctrl+Z/Y: Undo/Redo    Esc: Exit\n";
+    status << "  P: Pause  R: Reset  V: Vectors   I: Info   H: Help (toggle)\n";
+    status << "  Ctrl+Z/Y:  Undo/Redo  Esc:  Exit\n";
   } else {
-    status << "\nPress H for instructions";
+    status << "\n Press H for instructions";
   }
 
   sf::Text text = makeText(font, status.str(), 14);
@@ -271,7 +269,7 @@ void drawStatus(sf::RenderWindow& window, const sf::Font& font,
   window.draw(text);
 }
 
-// Input
+// Input#code
 
 #if SFML_VERSION_MAJOR >= 3
 
@@ -395,10 +393,10 @@ void loadPresetKey(int number, EventQueue& queue, AppSettings& settings) {
     settings.launchSpeed = PROJECTILE_SPEED;
     settings.launchMass = 1.0f;
     settings.paused = false;
-    settings.message = "Projectile: set angle, speed, mass, then Space to fire";
+    settings.message = "Projectile: set angle,speed,mass,then Space to fire";
   } else {
     settings.paused = true;
-    settings.message = "Paused: click a body, change its values, Enter to apply, P to start";
+    settings.message = "Paused: click a body,change its values,Enter to apply, P to start";
   }
 }
 
@@ -443,7 +441,7 @@ void handleKey(const RawInput& input, World& world, EventQueue& queue,
 
     case Key::Enter:
       if (!hasValidSelection(world, settings)) {
-        settings.message = "Click a body first, then press Enter";
+        settings.message = "Click a body first,then press Enter";
         break;
       } else {
         WorldState edited = world.getState();
@@ -452,7 +450,7 @@ void handleKey(const RawInput& input, World& world, EventQueue& queue,
         body.velocity = launchVelocity(settings.launchAngleDegrees, settings.launchSpeed);
         queue.push(SandboxEvent::replaceScene(edited));
         stopDragging(settings);
-        settings.message = "Applied to body " + std::to_string(settings.selectedBodyIndex);
+        settings.message = "Applied to body" + std::to_string(settings.selectedBodyIndex);
       }
       break;
 
@@ -693,26 +691,21 @@ int run() {
     for (const RawInput& input : pollInput(window)) {
       handleInput(input, world, queue, settings, window);
     }
-
     // 2. Scene changes are applied in arrival order, all at once
     world.processEvents(queue);
-
     // 3. A dragged body follows the mouse
     if (settings.dragging) {
       sf::Vector2i mouse = sf::Mouse::getPosition(window);
       world.dragBody(settings.draggedBodyIndex,
         { static_cast<float>(mouse.x), static_cast<float>(mouse.y) });
     }
-
     // 4. Physics, in fixed steps (restart() is called even when paused,
     // so un-pausing does not produce one huge step)
     float frameTime = clock.restart().asSeconds();
     if (!settings.paused) world.update(frameTime);
-
-    // 5. Drawing: springs underneath, then bodies, then the overlay text
+// 5. Drawing: springs underneath, then bodies, then the overlay text
     window.clear(sf::Color(20, 22, 30));
-
-    for (const SpringForce& spring : world.getSprings()) {
+for (const SpringForce& spring : world.getSprings()) {
       drawSpring(window, spring, world.getBodies());
     }
 
@@ -722,12 +715,8 @@ int run() {
       if (settings.showVelocityVectors) drawVelocityVector(window, body);
       if (settings.showBodyInfo) drawBodyInfo(window, body, font);
     }
-
-    drawStatus(window, font, settings, world);
+ drawStatus(window, font, settings, world);
     window.display();
   }
-
-  return 0;
-}
-
-} // namespace sandbox
+return 0;
+}} // namespace sandbox 
