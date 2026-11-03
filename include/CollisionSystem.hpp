@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <functional>
 #include <vector>
 #include <unordered_map>
 #include <utility>
@@ -32,9 +34,10 @@ Manifold testCollision(const Body& a, const Body& b);
 // so large bodies (like a full-width floor) are found from any
 // cell they touch.
 struct PairHash {
-  size_t operator()(const std::pair<int, int>& cell) const {
-    return (static_cast<size_t>(static_cast<unsigned int>(cell.first)) << 32)
-      ^ static_cast<size_t>(static_cast<unsigned int>(cell.second));
+  std::size_t operator()(const std::pair<int, int>& cell) const {
+    const std::size_t first = std::hash<int>{}(cell.first);
+    const std::size_t second = std::hash<int>{}(cell.second);
+    return first ^ (second * static_cast<std::size_t>(0x9e3779b9U));
   }
 };
 
