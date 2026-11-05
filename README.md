@@ -52,7 +52,7 @@ Users can create particles, circles and boxes, adjust their mass, velocity, fric
 
 **Installation & Setup**
 
-Prerequisites: A C++17 compiler and SFML 3.0 installed on your system.
+Prerequisites: A C++17 compiler with standard-library support for `std::clamp`, and SFML 3.0 installed for that same compiler toolchain. On Windows with MSYS2, install `mingw-w64-ucrt-x86_64-sfml` and use the UCRT64 compiler and terminal for the commands below. MinGW.org GCC 6.3 is too old and cannot use the UCRT64 SFML installation.
 
 1. Download the ZIP from the ForceForge GitHub repo.
 2. Extract it into a folder and open that folder in VS Code.
