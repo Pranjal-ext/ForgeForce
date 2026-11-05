@@ -6,12 +6,12 @@
 
 World::World(float width, float height)
   : width(width), height(height), collisionSystem(80.0f, 0.5f), history(50) {
-  auto gravityPtr = std::make_unique<GravityForce>(Vector2D{ 0.0f, 900.0f });
-  auto dragPtr = std::make_unique<DragForce>();
-  gravityForce = gravityPtr.get();
-  dragForce = dragPtr.get();
-  forces.push_back(std::move(gravityPtr));
-  forces.push_back(std::move(dragPtr));
+  auto gravityGenerator = std::make_unique<GravityForce>(Vector2D{ 0.0f, 900.0f });
+  auto dragGenerator = std::make_unique<DragForce>();
+  gravityForce = gravityGenerator.get();
+  dragForce = dragGenerator.get();
+  forces.push_back(std::move(gravityGenerator));
+  forces.push_back(std::move(dragGenerator));
 
   reset();
   history.clear(); // the starting scene is not an undoable action
@@ -41,21 +41,21 @@ void World::reset() {
   applySettings();
 }
 
-bool World::loadPreset(int number) {
-  if (number < 1 || number > PRESET_COUNT) return false;
-  state = buildPreset(static_cast<Preset>(number), width, height);
+bool World::loadPreset(int presetNumber) {
+  if (presetNumber < 1 || presetNumber > PRESET_COUNT) return false;
+  state = buildPreset(static_cast<Preset>(presetNumber), width, height);
   timeAccumulator = 0.0f;
   applySettings();
   return true;
 }
 
-void World::replaceState(const WorldState& newState) {
-  state = newState;
+void World::replaceState(const WorldState& replacementState) {
+  state = replacementState;
 
   // Drop springs that would point at bodies that no longer exist
   state.springs.erase(
     std::remove_if(state.springs.begin(), state.springs.end(),
-      [&](const SpringForce& s) { return !s.connects(state.bodies.size()); }),
+      [&](const SpringForce& spring) { return !spring.connects(state.bodies.size()); }),
     state.springs.end());
 
   timeAccumulator = 0.0f;
@@ -70,18 +70,18 @@ void World::applySettings() {
 
 // Mouse interaction
 
-int World::bodyAt(const Vector2D& point) const {
+int World::bodyAt(const Vector2D& worldPoint) const {
   // From the end: the most recently added body is drawn on top
-  for (int i = static_cast<int>(state.bodies.size()) - 1; i >= 0; --i) {
-    if (state.bodies[i].containsPoint(point)) return i;
+  for (int bodyIndex = static_cast<int>(state.bodies.size()) - 1; bodyIndex >= 0; --bodyIndex) {
+    if (state.bodies[bodyIndex].containsPoint(worldPoint)) return bodyIndex;
   }
   return -1;
 }
 
-void World::dragBody(int index, const Vector2D& position) {
-  if (index < 0 || index >= static_cast<int>(state.bodies.size())) return;
+void World::dragBody(int bodyIndex, const Vector2D& position) {
+  if (bodyIndex < 0 || bodyIndex >= static_cast<int>(state.bodies.size())) return;
 
-  Body& body = state.bodies[index];
+  Body& body = state.bodies[bodyIndex];
   if (body.isStatic()) return;
 
   body.position = position;
@@ -168,8 +168,8 @@ void World::update(float frameTime) {
   if (steps == maxSteps) timeAccumulator = 0.0f;
 }
 
-void World::step(float dt) {
-  if (dt <= 0.0f) return;
+void World::step(float deltaTime) {
+  if (deltaTime <= 0.0f) return;
 
   // 1. Forces. Every generator is used through the base class:
   // each one's own apply() runs (polymorphism).
@@ -181,11 +181,11 @@ void World::step(float dt) {
   }
 
   // 2. Motion
-  integration.step(state.bodies, dt);
+  integration.step(state.bodies, deltaTime);
 
   // 3. Contacts. Impacts slower than about two steps of gravity are
   // treated as resting contact so stacks settle instead of jittering.
   float gravityStrength = gravityForce->isEnabled() ? gravityForce->getAcceleration().length() : 0.0f;
-  collisionSystem.setRestitutionThreshold(std::max(1.0f, 2.0f * gravityStrength * dt));
+  collisionSystem.setRestitutionThreshold(std::max(1.0f, 2.0f * gravityStrength * deltaTime));
   collisionSystem.step(state.bodies);
 }
