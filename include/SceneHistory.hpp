@@ -17,11 +17,11 @@
 // dropped from the front when the capacity is exceeded.
 class SceneHistory {
 public:
-  explicit SceneHistory(std::size_t capacity = 50);
+  explicit SceneHistory(std::size_t historyCapacity = 50);
 
-  void record(const WorldState& current);
-  bool undo(WorldState& current);
-  bool redo(WorldState& current);
+  void record(const WorldState& currentState);
+  bool undo(WorldState& currentState);
+  bool redo(WorldState& currentState);
   void clear();
 
   bool canUndo() const { return !undoStack.empty(); }
@@ -35,5 +35,5 @@ private:
   std::deque<WorldState> undoStack;
   std::deque<WorldState> redoStack;
 
-  void push(std::deque<WorldState>& stack, const WorldState& state);
+  void push(std::deque<WorldState>& historyStack, const WorldState& sceneSnapshot);
 };
