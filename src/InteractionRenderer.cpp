@@ -12,32 +12,32 @@ namespace sandbox {
 
 // Conversions, shape creation and launch values...#code1
 
-sf::Vector2f toSFML(const Vector2D& v) {
-  return sf::Vector2f(v.x, v.y);
+sf::Vector2f toSFML(const Vector2D& vector) {
+  return sf::Vector2f(vector.x, vector.y);
 }
 
 namespace {
 
 Vector2D toWorld(const sf::RenderWindow& window, const sf::Vector2i& pixel) {
-  sf::Vector2f p = window.mapPixelToCoords(pixel);
-  return { p.x, p.y };
+  sf::Vector2f worldPosition = window.mapPixelToCoords(pixel);
+  return { worldPosition.x, worldPosition.y };
 }
 
 std::string fixed(float value, int decimals) {
-  std::ostringstream s;
-  s << std::fixed << std::setprecision(decimals) << value;
-  return s.str();
+  std::ostringstream formattedValue;
+  formattedValue << std::fixed << std::setprecision(decimals) << value;
+  return formattedValue.str();
 }
 
 } // namespace
 
-Body createShape(const Vector2D& position, SpawnShape shape, float size) {
+Body createShape(const Vector2D& position, SpawnShape shape, float shapeSize) {
   switch (shape) {
-    case SpawnShape::Circle: return Body::makeCircle(position, size);
-    case SpawnShape::Triangle: return Body::makeRegularPolygon(position, 3, size);
-    case SpawnShape::Square: return Body::makeRegularPolygon(position, 4, size);
+    case SpawnShape::Circle: return Body::makeCircle(position, shapeSize);
+    case SpawnShape::Triangle: return Body::makeRegularPolygon(position, 3, shapeSize);
+    case SpawnShape::Square: return Body::makeRegularPolygon(position, 4, shapeSize);
   }
-  return Body::makeCircle(position, size);
+  return Body::makeCircle(position, shapeSize);
 }
 
 std::string shapeName(SpawnShape shape) {
@@ -85,11 +85,11 @@ sf::Vertex makeVertex(const Vector2D& position, const sf::Color& color) {
 
 } // namespace
 
-sf::Text makeText(const sf::Font& font, const std::string& content, unsigned int size) {
+sf::Text makeText(const sf::Font& font, const std::string& content, unsigned int characterSize) {
 #if SFML_VERSION_MAJOR >= 3
-  sf::Text text(font, content, size);
+  sf::Text text(font, content, characterSize);
 #else
-  sf::Text text(content, font, size);
+  sf::Text text(content, font, characterSize);
 #endif
   text.setFillColor(sf::Color::White);
   return text;
@@ -119,8 +119,8 @@ void drawBody(sf::RenderWindow& window, const Body& body) {
  else if (body.shapeType == ShapeType::Polygon) {
     sf::ConvexShape polygon;
     polygon.setPointCount(body.localVertices.size());
-    for (std::size_t i = 0; i < body.localVertices.size(); ++i) {
-      polygon.setPoint(i, toSFML(body.localVertices[i]));
+    for (std::size_t vertexIndex = 0; vertexIndex < body.localVertices.size(); ++vertexIndex) {
+      polygon.setPoint(vertexIndex, toSFML(body.localVertices[vertexIndex]));
     }
     polygon.setPosition(toSFML(body.position));
     polygon.setFillColor(body.isStatic() ? staticColor : sf::Color(170, 110, 255));
@@ -173,9 +173,9 @@ void drawBodyInfo(sf::RenderWindow& window, const Body& body, const sf::Font& fo
 }
 
 void drawSelection(sf::RenderWindow& window, const Body& body) {
-  const float r = body.boundingRadius() + 6.0f;
-  sf::CircleShape ring(r);
-  ring.setOrigin(sf::Vector2f(r, r));
+  const float selectionRadius = body.boundingRadius() + 6.0f;
+  sf::CircleShape ring(selectionRadius);
+  ring.setOrigin(sf::Vector2f(selectionRadius, selectionRadius));
   ring.setPosition(toSFML(body.position));
   ring.setFillColor(sf::Color::Transparent);
   ring.setOutlineColor(sf::Color(255, 220, 60));
@@ -184,7 +184,7 @@ void drawSelection(sf::RenderWindow& window, const Body& body) {
 }
 
 void drawLauncher(sf::RenderWindow& window, const AppSettings& settings,
-  const World& world, float gravity) {
+  const World& world, float gravityAcceleration) {
   const Vector2D start = launchPoint(world.getHeight(), settings.spawnSize);
   const Vector2D velocity = launchVelocity(settings.launchAngleDegrees, settings.launchSpeed);
 
@@ -207,11 +207,13 @@ void drawLauncher(sf::RenderWindow& window, const AppSettings& settings,
   dot.setOrigin(sf::Vector2f(2.0f, 2.0f));
   dot.setFillColor(sf::Color(220, 220, 220, 140));
 
-  for (int i = 1; i <= 60; ++i) {
-    const float t = 0.05f * static_cast<float>(i);
-    const Vector2D p = start + velocity * t + Vector2D(0.0f, 0.5f * gravity * t * t);
-    if (p.y > ground || p.x < left || p.x > right) break;
-    dot.setPosition(toSFML(p));
+  for (int sampleIndex = 1; sampleIndex <= 60; ++sampleIndex) {
+    const float elapsedTime = 0.05f * static_cast<float>(sampleIndex);
+    const Vector2D predictedPosition = start + velocity * elapsedTime +
+      Vector2D(0.0f, 0.5f * gravityAcceleration * elapsedTime * elapsedTime);
+    if (predictedPosition.y > ground || predictedPosition.x < left ||
+      predictedPosition.x > right) break;
+    dot.setPosition(toSFML(predictedPosition));
     window.draw(dot);
   }
 }
@@ -379,16 +381,17 @@ bool roomForAnotherBody(const World& world, AppSettings& settings) {
 }
 
 bool hasValidSelection(const World& world, const AppSettings& settings) {
-  const int i = settings.selectedBodyIndex;
-  return i >= 0 && i < static_cast<int>(world.getBodies().size()) &&
-    !world.getBodies()[i].isStatic();
+  const int selectedBodyIndex = settings.selectedBodyIndex;
+  return selectedBodyIndex >= 0 &&
+    selectedBodyIndex < static_cast<int>(world.getBodies().size()) &&
+    !world.getBodies()[selectedBodyIndex].isStatic();
 }
 
-void loadPresetKey(int number, EventQueue& queue, AppSettings& settings) {
-  queue.push(SandboxEvent::preset(number));
+void loadPresetKey(int presetNumber, EventQueue& queue, AppSettings& settings) {
+  queue.push(SandboxEvent::preset(presetNumber));
   clearSelection(settings);
 
-  if (number == static_cast<int>(Preset::Projectile)) {
+  if (presetNumber == static_cast<int>(Preset::Projectile)) {
     settings.launchAngleDegrees = PROJECTILE_ANGLE_DEGREES;
     settings.launchSpeed = PROJECTILE_SPEED;
     settings.launchMass = 1.0f;
@@ -444,11 +447,11 @@ void handleKey(const RawInput& input, World& world, EventQueue& queue,
         settings.message = "Click a body first,then press Enter";
         break;
       } else {
-        WorldState edited = world.getState();
-        Body& body = edited.bodies[settings.selectedBodyIndex];
+        WorldState editedWorldState = world.getState();
+        Body& body = editedWorldState.bodies[settings.selectedBodyIndex];
         body.setMass(settings.launchMass);
         body.velocity = launchVelocity(settings.launchAngleDegrees, settings.launchSpeed);
-        queue.push(SandboxEvent::replaceScene(edited));
+        queue.push(SandboxEvent::replaceScene(editedWorldState));
         stopDragging(settings);
         settings.message = "Applied to body" + std::to_string(settings.selectedBodyIndex);
       }
@@ -457,9 +460,10 @@ void handleKey(const RawInput& input, World& world, EventQueue& queue,
     case Key::Delete:
     case Key::Backspace:
       if (hasValidSelection(world, settings)) {
-        WorldState edited = world.getState();
-        edited.bodies.erase(edited.bodies.begin() + settings.selectedBodyIndex);
-        queue.push(SandboxEvent::replaceScene(edited));
+        WorldState editedWorldState = world.getState();
+        editedWorldState.bodies.erase(
+          editedWorldState.bodies.begin() + settings.selectedBodyIndex);
+        queue.push(SandboxEvent::replaceScene(editedWorldState));
         clearSelection(settings);
         settings.message = "Body removed";
       }
@@ -499,18 +503,18 @@ void handleInput(const RawInput& input, World& world, EventQueue& queue,
       break;
 
     case RawInput::Kind::MouseDown: {
-      int index = world.bodyAt(input.mouse);
-      if (index < 0) {
+      int bodyIndex = world.bodyAt(input.mouse);
+      if (bodyIndex < 0) {
         settings.selectedBodyIndex = -1;
         if (roomForAnotherBody(world, settings)) {
           queue.push(SandboxEvent::spawn(createLaunchedBody(input.mouse, settings)));
         }
-      } else if (!world.getBodies()[index].isStatic()) {
-        settings.selectedBodyIndex = index;
-        settings.pressedBodyIndex = index;
+      } else if (!world.getBodies()[bodyIndex].isStatic()) {
+        settings.selectedBodyIndex = bodyIndex;
+        settings.pressedBodyIndex = bodyIndex;
         settings.pressPoint = input.mouse;
-        readBodyIntoSettings(world.getBodies()[index], settings);
-        settings.message = "Body " + std::to_string(index) +
+        readBodyIntoSettings(world.getBodies()[bodyIndex], settings);
+        settings.message = "Body " + std::to_string(bodyIndex) +
           " selected: change values, Enter to apply";
       } else {
         settings.selectedBodyIndex = -1;
@@ -530,12 +534,12 @@ void handleInput(const RawInput& input, World& world, EventQueue& queue,
 
 // Scene persistence (backend only: no key binding)
 
-bool saveScene(const WorldState& scene, const std::string& filename) {
+bool saveScene(const WorldState& worldState, const std::string& filename) {
   std::ofstream file(filename);
   if (!file.is_open()) return false;
 
-  file << scene.bodies.size() << "\n";
-  for (const Body& body : scene.bodies) {
+  file << worldState.bodies.size() << "\n";
+  for (const Body& body : worldState.bodies) {
     file << static_cast<int>(body.shapeType) << " "
       << body.position.x << " " << body.position.y << " "
       << body.velocity.x << " " << body.velocity.y << " "
@@ -549,31 +553,31 @@ bool saveScene(const WorldState& scene, const std::string& filename) {
     file << "\n";
   }
 
-  file << "springs " << scene.springs.size() << "\n";
-  for (const SpringForce& s : scene.springs) {
-    file << s.getBodyA() << " " << s.getBodyB() << " " << s.getRestLength() << " "
-      << s.getStiffness() << " " << s.getDamping() << "\n";
+  file << "springs " << worldState.springs.size() << "\n";
+  for (const SpringForce& spring : worldState.springs) {
+    file << spring.getBodyA() << " " << spring.getBodyB() << " " << spring.getRestLength() << " "
+      << spring.getStiffness() << " " << spring.getDamping() << "\n";
   }
 
-  file << "settings " << scene.settings.restitution << " " << scene.settings.friction << " "
-    << (scene.settings.dragEnabled ? 1 : 0) << "\n";
+  file << "settings " << worldState.settings.restitution << " " << worldState.settings.friction << " "
+    << (worldState.settings.dragEnabled ? 1 : 0) << "\n";
 
   return static_cast<bool>(file);
 }
 
-bool loadScene(WorldState& scene, const std::string& filename) {
+bool loadScene(WorldState& worldState, const std::string& filename) {
   std::ifstream file(filename);
   if (!file.is_open()) return false;
 
-  int count = 0;
-  file >> count;
-  if (!file || count < 0) return false;
+  int bodyCount = 0;
+  file >> bodyCount;
+  if (!file || bodyCount < 0) return false;
 
   // Build into a temporary so a damaged file leaves the caller's scene untouched
-  WorldState loaded;
-  loaded.bodies.reserve(count);
+  WorldState loadedWorldState;
+  loadedWorldState.bodies.reserve(bodyCount);
 
-  for (int i = 0; i < count; ++i) {
+  for (int bodyIndex = 0; bodyIndex < bodyCount; ++bodyIndex) {
     Body body;
     int shapeType = 0;
     int vertexCount = 0;
@@ -597,47 +601,48 @@ bool loadScene(WorldState& scene, const std::string& filename) {
     body.shapeType = static_cast<ShapeType>(shapeType);
     body.setMass(mass);
 
-    for (int j = 0; j < vertexCount; ++j) {
+    for (int vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex) {
       Vector2D vertex;
       file >> vertex.x >> vertex.y;
       body.localVertices.push_back(vertex);
     }
     if (!file) return false;
 
-    loaded.bodies.push_back(body);
+    loadedWorldState.bodies.push_back(body);
   }
 
   // Optional sections; files without them still load with defaults
-  std::string tag;
-  while (file >> tag) {
-    if (tag == "springs") {
+  std::string sectionTag;
+  while (file >> sectionTag) {
+    if (sectionTag == "springs") {
       int springCount = 0;
       file >> springCount;
       if (!file || springCount < 0) return false;
 
-      for (int i = 0; i < springCount; ++i) {
-        int a = 0, b = 0;
-        float rest = 0.0f, stiffness = 0.0f, damping = 0.0f;
-        file >> a >> b >> rest >> stiffness >> damping;
+      for (int springIndex = 0; springIndex < springCount; ++springIndex) {
+        int firstBodyIndex = 0, secondBodyIndex = 0;
+        float restLength = 0.0f, stiffness = 0.0f, damping = 0.0f;
+        file >> firstBodyIndex >> secondBodyIndex >> restLength >> stiffness >> damping;
         if (!file) return false;
 
-        SpringForce spring(a, b, rest, stiffness, damping);
-        if (!spring.connects(loaded.bodies.size())) return false;
-        loaded.springs.push_back(spring);
+        SpringForce spring(firstBodyIndex, secondBodyIndex, restLength, stiffness, damping);
+        if (!spring.connects(loadedWorldState.bodies.size())) return false;
+        loadedWorldState.springs.push_back(spring);
       }
     }
-    else if (tag == "settings") {
-      int drag = 1;
-      file >> loaded.settings.restitution >> loaded.settings.friction >> drag;
+    else if (sectionTag == "settings") {
+      int dragEnabled = 1;
+      file >> loadedWorldState.settings.restitution >>
+        loadedWorldState.settings.friction >> dragEnabled;
       if (!file) return false;
-      loaded.settings.dragEnabled = (drag != 0);
+      loadedWorldState.settings.dragEnabled = (dragEnabled != 0);
     }
     else {
       return false; // unknown section: treat the file as damaged
     }
   }
 
-  scene = std::move(loaded);
+  worldState = std::move(loadedWorldState);
   return true;
 }
 
@@ -645,7 +650,7 @@ bool loadScene(WorldState& scene, const std::string& filename) {
 
 bool loadFont(sf::Font& font) {
   // Bundled font first, then common system locations on Windows, Linux and macOS
-  const char* paths[] = {
+  const char* fontPaths[] = {
     "arial.ttf",
     "C:/Windows/Fonts/arial.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -653,11 +658,11 @@ bool loadFont(sf::Font& font) {
     "/System/Library/Fonts/Supplemental/Arial.ttf"
   };
 
-  for (const char* path : paths) {
+  for (const char* fontPath : fontPaths) {
 #if SFML_VERSION_MAJOR >= 3
-  if (font.openFromFile(path)) return true;
+  if (font.openFromFile(fontPath)) return true;
 #else
-  if (font.loadFromFile(path)) return true;
+  if (font.loadFromFile(fontPath)) return true;
 #endif
   }
   return false;
@@ -695,9 +700,9 @@ int run() {
     world.processEvents(queue);
     // 3. A dragged body follows the mouse
     if (settings.dragging) {
-      sf::Vector2i mouse = sf::Mouse::getPosition(window);
+      sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
       world.dragBody(settings.draggedBodyIndex,
-        { static_cast<float>(mouse.x), static_cast<float>(mouse.y) });
+        { static_cast<float>(mousePosition.x), static_cast<float>(mousePosition.y) });
     }
     // 4. Physics, in fixed steps (restart() is called even when paused,
     // so un-pausing does not produce one huge step)
