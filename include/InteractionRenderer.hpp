@@ -67,8 +67,8 @@ struct RawInput {
 };
 
 // Conversions, shape creation and launch values
-sf::Vector2f toSFML(const Vector2D& v);
-Body createShape(const Vector2D& position, SpawnShape shape, float size);
+sf::Vector2f toSFML(const Vector2D& vector);
+Body createShape(const Vector2D& position, SpawnShape shape, float shapeSize);
 std::string shapeName(SpawnShape shape);
 
 // Keeps angle in [0, 360), speed and mass inside the feasible ranges
@@ -81,13 +81,13 @@ Body createLaunchedBody(const Vector2D& position, const AppSettings& settings);
 void readBodyIntoSettings(const Body& body, AppSettings& settings);
 
 // Drawing
-sf::Text makeText(const sf::Font& font, const std::string& content, unsigned int size);
+sf::Text makeText(const sf::Font& font, const std::string& content, unsigned int characterSize);
 void drawBody(sf::RenderWindow& window, const Body& body);
 void drawVelocityVector(sf::RenderWindow& window, const Body& body);
 void drawBodyInfo(sf::RenderWindow& window, const Body& body, const sf::Font& font);
 void drawSelection(sf::RenderWindow& window, const Body& body);
 void drawLauncher(sf::RenderWindow& window, const AppSettings& settings,
-  const World& world, float gravity);
+  const World& world, float gravityAcceleration);
 void drawStatus(sf::RenderWindow& window, const sf::Font& font,
   const AppSettings& settings, const World& world);
 
@@ -100,8 +100,8 @@ void handleInput(const RawInput& input, World& world, EventQueue& queue,
   AppSettings& settings, sf::RenderWindow& window);
 
 // Scene persistence (backend only: not bound to any key)
-bool saveScene(const WorldState& scene, const std::string& filename);
-bool loadScene(WorldState& scene, const std::string& filename);
+bool saveScene(const WorldState& worldState, const std::string& filename);
+bool loadScene(WorldState& worldState, const std::string& filename);
 
 // Font and main loop
 bool loadFont(sf::Font& font);
