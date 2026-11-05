@@ -20,14 +20,14 @@ struct Manifold {
 };
 
 // Narrow-phase tests
-Manifold testCircleCircle(const Body& a, const Body& b);
+Manifold testCircleCircle(const Body& firstBody, const Body& secondBody);
 Manifold testCircleBox(const Body& circle, const Body& box);
-Manifold testBoxBox(const Body& a, const Body& b);
+Manifold testBoxBox(const Body& firstBody, const Body& secondBody);
 Manifold testCirclePolygon(const Body& circle, const Body& polygon); // polygon may be Box or Polygon
-Manifold testPolygonPolygon(const Body& a, const Body& b); // either may be Box or Polygon
+Manifold testPolygonPolygon(const Body& firstBody, const Body& secondBody); // either may be Box or Polygon
 
-// Picks the right test for any pair of shape types; normal always points a -> b
-Manifold testCollision(const Body& a, const Body& b);
+// Picks the right test for any pair of shape types; normal always points first -> second
+Manifold testCollision(const Body& firstBody, const Body& secondBody);
 
 // Spatial hash grid (broad phase)
 // Each body is inserted into every cell its bounding box covers,
@@ -35,9 +35,10 @@ Manifold testCollision(const Body& a, const Body& b);
 // cell they touch.
 struct PairHash {
   std::size_t operator()(const std::pair<int, int>& cell) const {
-    const std::size_t first = std::hash<int>{}(cell.first);
-    const std::size_t second = std::hash<int>{}(cell.second);
-    return first ^ (second * static_cast<std::size_t>(0x9e3779b9U));
+    const std::size_t firstCoordinateHash = std::hash<int>{}(cell.first);
+    const std::size_t secondCoordinateHash = std::hash<int>{}(cell.second);
+    return firstCoordinateHash ^
+      (secondCoordinateHash * static_cast<std::size_t>(0x9e3779b9U));
   }
 };
 
@@ -53,7 +54,7 @@ private:
   float cellSize;
   std::unordered_map<std::pair<int, int>, std::vector<int>, PairHash> cells;
 
-  int cellCoord(float value) const;
+  int cellCoord(float coordinateValue) const;
 };
 
 // Collision response
@@ -61,14 +62,14 @@ private:
 // Normal impulse with restitution, plus Coulomb friction impulse.
 // Impacts slower than restitutionThreshold are treated as resting
 // contact (no bounce), so stacked/resting bodies settle to zero velocity.
-void resolveCollision(Body& a, Body& b, const Vector2D& normal,
+void resolveCollision(Body& firstBody, Body& secondBody, const Vector2D& normal,
   float restitution, float restitutionThreshold, float friction);
 
 // Pushes overlapping bodies apart by a fraction of the penetration
-void correctPosition(Body& a, Body& b, const Vector2D& normal, float penetration);
+void correctPosition(Body& firstBody, Body& secondBody, const Vector2D& normal, float penetration);
 
 // Snaps tiny velocities to exactly zero
-void applyVelocitySleep(Body& body, float threshold);
+void applyVelocitySleep(Body& body, float velocityThreshold);
 
 // CollisionSystem
 // Runs broad phase, narrow phase and response for one frame.
@@ -78,16 +79,16 @@ public:
 
   void step(std::vector<Body>& bodies);
 
-  void setRestitution(float value) { restitution = value; }
+  void setRestitution(float restitutionValue) { restitution = restitutionValue; }
   float getRestitution() const { return restitution; }
   // Should exceed gravity * timestep, e.g. 2 * gravity / 60 at 60 FPS
-  void setRestitutionThreshold(float value) { restitutionThreshold = value; }
+  void setRestitutionThreshold(float minimumImpactSpeed) { restitutionThreshold = minimumImpactSpeed; }
   float getRestitutionThreshold() const { return restitutionThreshold; }
-  void setFriction(float value) { friction = value; }
+  void setFriction(float frictionCoefficient) { friction = frictionCoefficient; }
   float getFriction() const { return friction; }
-  void setSleepThreshold(float value) { sleepThreshold = value; }
+  void setSleepThreshold(float sleepSpeedThreshold) { sleepThreshold = sleepSpeedThreshold; }
   // More iterations give more stable stacks at a small CPU cost
-  void setSolverIterations(int value) { solverIterations = std::max(1, value); }
+  void setSolverIterations(int iterationCount) { solverIterations = std::max(1, iterationCount); }
 
 private:
   struct Contact {
