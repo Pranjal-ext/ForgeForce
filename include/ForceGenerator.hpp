@@ -21,7 +21,7 @@ public:
   // Human-readable name, used for display and debugging
   virtual std::string name() const = 0;
 
-  void setEnabled(bool value) { enabled = value; }
+  void setEnabled(bool enabledValue) { enabled = enabledValue; }
   bool isEnabled() const { return enabled; }
 
 private:
@@ -34,12 +34,12 @@ private:
 // Screen y points down, so a positive y value pulls downward.
 class GravityForce : public ForceGenerator {
 public:
-  explicit GravityForce(const Vector2D& acceleration = { 0.0f, 900.0f });
+  explicit GravityForce(const Vector2D& initialAcceleration = { 0.0f, 900.0f });
 
   void apply(std::vector<Body>& bodies) const override;
   std::string name() const override { return "Gravity"; }
 
-  void setAcceleration(const Vector2D& value) { acceleration = value; }
+  void setAcceleration(const Vector2D& newAcceleration) { acceleration = newAcceleration; }
   const Vector2D& getAcceleration() const { return acceleration; }
 
 private:
@@ -53,12 +53,12 @@ private:
 // Heavier bodies slow down less, because a = F / m.
 class DragForce : public ForceGenerator {
 public:
-  explicit DragForce(float linear = 0.02f, float quadratic = 0.0001f);
+  explicit DragForce(float linearCoefficient = 0.02f, float quadraticCoefficient = 0.0001f);
 
   void apply(std::vector<Body>& bodies) const override;
   std::string name() const override { return "Drag"; }
 
-  void setCoefficients(float linear, float quadratic);
+  void setCoefficients(float linearCoefficient, float quadraticCoefficient);
   float getLinear() const { return linear; }
   float getQuadratic() const { return quadratic; }
 
@@ -74,7 +74,8 @@ private:
 // Equal and opposite forces act on both ends (Newton's third law).
 class SpringForce : public ForceGenerator {
 public:
-  SpringForce(int bodyA, int bodyB, float restLength, float stiffness, float damping = 0.0f);
+  SpringForce(int firstBodyIndex, int secondBodyIndex, float restLength, float stiffness,
+    float damping = 0.0f);
 
   void apply(std::vector<Body>& bodies) const override;
   std::string name() const override { return "Spring"; }
