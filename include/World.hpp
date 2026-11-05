@@ -43,12 +43,12 @@ public:
   bool addSpring(const SpringForce& spring); // false if it refers to missing bodies
   void setSettings(const PhysicsSettings& settings);
   void reset(); // floor and walls only, default settings
-  bool loadPreset(int number); // 1 to PRESET_COUNT
-  void replaceState(const WorldState& newState);
+  bool loadPreset(int presetNumber); // 1 to PRESET_COUNT
+  void replaceState(const WorldState& replacementState);
 
   // Mouse interaction
-  int bodyAt(const Vector2D& point) const; // topmost body under the point, or -1
-  void dragBody(int index, const Vector2D& position);
+  int bodyAt(const Vector2D& worldPoint) const; // topmost body under the point, or -1
+  void dragBody(int bodyIndex, const Vector2D& position);
 
   // Undo / redo
   void saveUndoPoint();
@@ -64,7 +64,7 @@ public:
   // Advances by real elapsed time using as many fixed steps as fit
   void update(float frameTime);
   // Advances by exactly dt seconds
-  void step(float dt);
+  void step(float deltaTime);
 
   // Components
   GravityForce& gravity() { return *gravityForce; }
