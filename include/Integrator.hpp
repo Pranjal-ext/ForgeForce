@@ -19,7 +19,7 @@ class Integrator {
 public:
   explicit Integrator(IntegrationMethod method = IntegrationMethod::SemiImplicitEuler);
 
-  void step(std::vector<Body>& bodies, float dt) const;
+  void step(std::vector<Body>& bodies, float deltaTime) const;
 
   void setMethod(IntegrationMethod value) { method = value; }
   IntegrationMethod getMethod() const { return method; }
