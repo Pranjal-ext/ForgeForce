@@ -1,32 +1,33 @@
 #include "SceneHistory.hpp"
 
-SceneHistory::SceneHistory(std::size_t capacity) : capacity(capacity > 0 ? capacity : 1) {}
+SceneHistory::SceneHistory(std::size_t historyCapacity)
+  : capacity(historyCapacity > 0 ? historyCapacity : 1) {}
 
-void SceneHistory::push(std::deque<WorldState>& stack, const WorldState& state) {
-  stack.push_back(state);
+void SceneHistory::push(std::deque<WorldState>& historyStack, const WorldState& sceneSnapshot) {
+  historyStack.push_back(sceneSnapshot);
   // Over capacity: forget the oldest snapshot, keep the newest
-  if (stack.size() > capacity) stack.pop_front();
+  if (historyStack.size() > capacity) historyStack.pop_front();
 }
 
-void SceneHistory::record(const WorldState& current) {
-  push(undoStack, current);
+void SceneHistory::record(const WorldState& currentState) {
+  push(undoStack, currentState);
   redoStack.clear();
 }
 
-bool SceneHistory::undo(WorldState& current) {
+bool SceneHistory::undo(WorldState& currentState) {
   if (undoStack.empty()) return false;
 
-  push(redoStack, current);
-  current = undoStack.back();
+  push(redoStack, currentState);
+  currentState = undoStack.back();
   undoStack.pop_back();
   return true;
 }
 
-bool SceneHistory::redo(WorldState& current) {
+bool SceneHistory::redo(WorldState& currentState) {
   if (redoStack.empty()) return false;
 
-  push(undoStack, current);
-  current = redoStack.back();
+  push(undoStack, currentState);
+  currentState = redoStack.back();
   redoStack.pop_back();
   return true;
 }
