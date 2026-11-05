@@ -49,8 +49,8 @@ std::vector<Vector2D> Body::regularPolygonVertices(int sides, float radius) {
   // triangles pointing up).
   float startAngle = pi / 2.0f + pi / sides;
 
-  for (int i = 0; i < sides; ++i) {
-    float angle = startAngle + (2.0f * pi * i) / sides;
+  for (int sideIndex = 0; sideIndex < sides; ++sideIndex) {
+    float angle = startAngle + (2.0f * pi * sideIndex) / sides;
     vertices.push_back({ std::cos(angle) * radius, std::sin(angle) * radius });
   }
   return vertices;
@@ -78,12 +78,12 @@ Vector2D Body::aabbMin() const {
       return boxMin();
     case ShapeType::Polygon: {
       if (localVertices.empty()) return position;
-      Vector2D lo = localVertices[0];
-      for (const Vector2D& v : localVertices) {
-        lo.x = std::min(lo.x, v.x);
-        lo.y = std::min(lo.y, v.y);
+      Vector2D minimumVertex = localVertices[0];
+      for (const Vector2D& vertex : localVertices) {
+        minimumVertex.x = std::min(minimumVertex.x, vertex.x);
+        minimumVertex.y = std::min(minimumVertex.y, vertex.y);
       }
-      return position + lo;
+      return position + minimumVertex;
     }
   }
   return position;
@@ -97,12 +97,12 @@ Vector2D Body::aabbMax() const {
       return boxMax();
     case ShapeType::Polygon: {
       if (localVertices.empty()) return position;
-      Vector2D hi = localVertices[0];
-      for (const Vector2D& v : localVertices) {
-        hi.x = std::max(hi.x, v.x);
-        hi.y = std::max(hi.y, v.y);
+      Vector2D maximumVertex = localVertices[0];
+      for (const Vector2D& vertex : localVertices) {
+        maximumVertex.x = std::max(maximumVertex.x, vertex.x);
+        maximumVertex.y = std::max(maximumVertex.y, vertex.y);
       }
-      return position + hi;
+      return position + maximumVertex;
     }
   }
   return position;
@@ -115,9 +115,11 @@ float Body::boundingRadius() const {
     case ShapeType::Box:
       return halfExtents.length();
     case ShapeType::Polygon: {
-      float r = 0.0f;
-      for (const Vector2D& v : localVertices) r = std::max(r, v.length());
-      return r;
+      float maximumRadius = 0.0f;
+      for (const Vector2D& vertex : localVertices) {
+        maximumRadius = std::max(maximumRadius, vertex.length());
+      }
+      return maximumRadius;
     }
   }
   return 0.0f;
@@ -127,13 +129,14 @@ std::vector<Vector2D> Body::worldVertices() const {
   std::vector<Vector2D> result;
 
   if (shapeType == ShapeType::Box) {
-    Vector2D lo = boxMin();
-    Vector2D hi = boxMax();
-    result = { { lo.x, lo.y }, { hi.x, lo.y }, { hi.x, hi.y }, { lo.x, hi.y } };
+    Vector2D minimum = boxMin();
+    Vector2D maximum = boxMax();
+    result = { { minimum.x, minimum.y }, { maximum.x, minimum.y },
+      { maximum.x, maximum.y }, { minimum.x, maximum.y } };
   }
   else if (shapeType == ShapeType::Polygon) {
     result.reserve(localVertices.size());
-    for (const Vector2D& v : localVertices) result.push_back(position + v);
+    for (const Vector2D& vertex : localVertices) result.push_back(position + vertex);
   }
 
   return result;
@@ -145,20 +148,21 @@ bool Body::containsPoint(const Vector2D& point) const {
   }
 
   if (shapeType == ShapeType::Box) {
-    Vector2D lo = boxMin(), hi = boxMax();
-    return point.x >= lo.x && point.x <= hi.x && point.y >= lo.y && point.y <= hi.y;
+    Vector2D minimum = boxMin(), maximum = boxMax();
+    return point.x >= minimum.x && point.x <= maximum.x &&
+      point.y >= minimum.y && point.y <= maximum.y;
   }
 
   // Convex polygon: the point is inside if it is on the same side of every edge
-  std::vector<Vector2D> verts = worldVertices();
-  if (verts.size() < 3) return false;
+  std::vector<Vector2D> vertices = worldVertices();
+  if (vertices.size() < 3) return false;
 
   bool hasPositive = false, hasNegative = false;
-  for (std::size_t i = 0; i < verts.size(); ++i) {
-    Vector2D edge = verts[(i + 1) % verts.size()] - verts[i];
-    float side = edge.cross(point - verts[i]);
-    if (side > 0.0f) hasPositive = true;
-    if (side < 0.0f) hasNegative = true;
+  for (std::size_t edgeIndex = 0; edgeIndex < vertices.size(); ++edgeIndex) {
+    Vector2D edge = vertices[(edgeIndex + 1) % vertices.size()] - vertices[edgeIndex];
+    float edgeSide = edge.cross(point - vertices[edgeIndex]);
+    if (edgeSide > 0.0f) hasPositive = true;
+    if (edgeSide < 0.0f) hasNegative = true;
     if (hasPositive && hasNegative) return false;
   }
   return true;
