@@ -47,7 +47,7 @@ struct Body {
   void setMass(float newMass);
   bool isStatic() const { return invMass == 0.0f; }
 
-  void applyForce(const Vector2D& f) { force += f; }
+  void applyForce(const Vector2D& appliedForce) { force += appliedForce; }
   void clearForce() { force = { 0.0f, 0.0f }; }
 
   // Geometry
