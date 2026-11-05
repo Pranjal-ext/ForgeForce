@@ -2,61 +2,61 @@
 
 // SandboxEvent helpers
 
-SandboxEvent SandboxEvent::spawn(const Body& body) {
-  SandboxEvent e;
-  e.type = EventType::SpawnBody;
-  e.body = body;
-  return e;
+SandboxEvent SandboxEvent::spawn(const Body& spawnedBody) {
+  SandboxEvent event;
+  event.type = EventType::SpawnBody;
+  event.body = spawnedBody;
+  return event;
 }
 
 SandboxEvent SandboxEvent::beginDrag() {
-  SandboxEvent e;
-  e.type = EventType::BeginDrag;
-  return e;
+  SandboxEvent event;
+  event.type = EventType::BeginDrag;
+  return event;
 }
 
 SandboxEvent SandboxEvent::reset() {
-  SandboxEvent e;
-  e.type = EventType::Reset;
-  return e;
+  SandboxEvent event;
+  event.type = EventType::Reset;
+  return event;
 }
 
 SandboxEvent SandboxEvent::undo() {
-  SandboxEvent e;
-  e.type = EventType::Undo;
-  return e;
+  SandboxEvent event;
+  event.type = EventType::Undo;
+  return event;
 }
 
 SandboxEvent SandboxEvent::redo() {
-  SandboxEvent e;
-  e.type = EventType::Redo;
-  return e;
+  SandboxEvent event;
+  event.type = EventType::Redo;
+  return event;
 }
 
-SandboxEvent SandboxEvent::preset(int number) {
-  SandboxEvent e;
-  e.type = EventType::LoadPreset;
-  e.value = number;
-  return e;
+SandboxEvent SandboxEvent::preset(int presetNumber) {
+  SandboxEvent event;
+  event.type = EventType::LoadPreset;
+  event.value = presetNumber;
+  return event;
 }
 
-SandboxEvent SandboxEvent::replaceScene(const WorldState& scene) {
-  SandboxEvent e;
-  e.type = EventType::ReplaceScene;
-  e.scene = scene;
-  return e;
+SandboxEvent SandboxEvent::replaceScene(const WorldState& replacementScene) {
+  SandboxEvent event;
+  event.type = EventType::ReplaceScene;
+  event.scene = replacementScene;
+  return event;
 }
 
 // EventQueue
 
-bool EventQueue::pop(SandboxEvent& out) {
+bool EventQueue::pop(SandboxEvent& outputEvent) {
   if (events.empty()) return false;
-  out = events.front();
+  outputEvent = events.front();
   events.pop();
   return true;
 }
 
 void EventQueue::clear() {
-  std::queue<SandboxEvent> empty;
-  events.swap(empty); // std::queue has no clear(); swapping with an empty one frees everything
+  std::queue<SandboxEvent> emptyQueue;
+  events.swap(emptyQueue); // std::queue has no clear(); swapping with an empty one frees everything
 }
