@@ -34,6 +34,10 @@ constexpr float MAX_LAUNCH_SPEED = 1000.0f;
 constexpr float MIN_BODY_MASS = 0.5f;
 constexpr float MAX_BODY_MASS = 20.0f;
 
+// Friction coefficient the user can set with [ and ] (0 = ice, 1.5 = rough rubber)
+constexpr float MIN_FRICTION = 0.0f;
+constexpr float MAX_FRICTION = 1.5f;
+
 // Upper limit on moving bodies, so repeated shots cannot slow the program down
 constexpr int MAX_DYNAMIC_BODIES = 80;
 

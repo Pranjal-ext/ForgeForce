@@ -33,8 +33,11 @@ struct AppSettings {
   bool showBodyInfo = true;
   bool showInstructions = false; // H toggles the controls list
 
+  // Drag and drop: press on a body, move the mouse, release to drop it
   bool dragging = false;
   int draggedBodyIndex = -1;
+  Vector2D dragOffset; // body centre minus the point where it was grabbed
+  Vector2D dragTarget; // where the dragged body's centre should be
 
   // A press on a body becomes a drag only after the mouse moves a few
   // pixels, so a plain click selects without stopping the body
@@ -57,10 +60,10 @@ struct AppSettings {
 
 // One input action, independent of the SFML version
 struct RawInput {
-  enum class Kind { Close, MouseDown, MouseUp, Key };
+  enum class Kind { Close, MouseDown, MouseUp, MouseMove, Key };
 
   Kind kind = Kind::Key;
-  Vector2D mouse; // for MouseDown / MouseUp (world coordinates)
+  Vector2D mouse; // for MouseDown / MouseUp / MouseMove (world coordinates)
   sf::Keyboard::Key key = sf::Keyboard::Key::Unknown; // for Key
   bool control = false; // Ctrl held during Key
   bool shift = false; // Shift held during Key (fine steps)
