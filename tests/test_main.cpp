@@ -49,100 +49,107 @@ static void check(bool condition, const std::string& name, const std::string& de
     }
 }
 
-static bool near(float a, float b, float tolerance) { return std::fabs(a - b) <= tolerance; }
+static bool near(float firstValue, float secondValue, float tolerance) {
+    return std::fabs(firstValue - secondValue) <= tolerance;
+}
 
 static std::string fmt(float value) {
-    std::ostringstream s;
-    s << std::fixed << std::setprecision(3) << value;
-    return s.str();
+    std::ostringstream formattedValue;
+    formattedValue << std::fixed << std::setprecision(3) << value;
+    return formattedValue.str();
 }
 
 static void section(const std::string& title) { std::cout << "\n== " << title << " ==\n"; }
 
-static const float W = 1280.0f;
-static const float H = 720.0f;
-static const float DT = World::FIXED_TIMESTEP;
+static const float WINDOW_WIDTH = 1280.0f;
+static const float WINDOW_HEIGHT = 720.0f;
+static const float FIXED_TIMESTEP = World::FIXED_TIMESTEP;
 
-static void runSteps(World& world, int steps, float dt = DT) {
-    for (int i = 0; i < steps; ++i) world.step(dt);
+static void runSteps(World& world, int stepCount, float deltaTime = FIXED_TIMESTEP) {
+    for (int stepIndex = 0; stepIndex < stepCount; ++stepIndex) world.step(deltaTime);
 }
 
-static bool isFinite(const Body& b) {
-    return std::isfinite(b.position.x) && std::isfinite(b.position.y) &&
-           std::isfinite(b.velocity.x) && std::isfinite(b.velocity.y);
+static bool isFinite(const Body& body) {
+    return std::isfinite(body.position.x) && std::isfinite(body.position.y) &&
+           std::isfinite(body.velocity.x) && std::isfinite(body.velocity.y);
 }
 
 // A world with drag off, for tests that need exact textbook motion
 static void disableDrag(World& world) {
-    PhysicsSettings s = world.getSettings();
-    s.dragEnabled = false;
-    world.setSettings(s);
+    PhysicsSettings settings = world.getSettings();
+    settings.dragEnabled = false;
+    world.setSettings(settings);
 }
 
 // ============================================================
 static void testVector2D() {
     section("Vector2D");
-    Vector2D a(3.0f, 4.0f);
-    check(near(a.length(), 5.0f, 1e-5f), "length of (3,4) is 5");
-    check(near(a.normalized().length(), 1.0f, 1e-5f), "normalized vector has length 1");
+    Vector2D vector(3.0f, 4.0f);
+    check(near(vector.length(), 5.0f, 1e-5f), "length of (3,4) is 5");
+    check(near(vector.normalized().length(), 1.0f, 1e-5f), "normalized vector has length 1");
     check(Vector2D(0, 0).normalized().length() == 0.0f, "normalizing a zero vector is safe");
-    check(near(a.dot(Vector2D(1, 0)), 3.0f, 1e-5f), "dot product");
+    check(near(vector.dot(Vector2D(1, 0)), 3.0f, 1e-5f), "dot product");
     check(Vector2D(1, 0).cross(Vector2D(0, 1)) > 0.0f, "cross product sign");
 }
 
 static void testBody() {
     section("Body");
-    Body c = Body::makeCircle({ 0, 0 }, 10.0f, 2.0f);
-    check(c.mass == 2.0f && near(c.invMass, 0.5f, 1e-6f), "setMass keeps invMass = 1/mass");
+    Body circle = Body::makeCircle({ 0, 0 }, 10.0f, 2.0f);
+    check(circle.mass == 2.0f && near(circle.invMass, 0.5f, 1e-6f), "setMass keeps invMass = 1/mass");
 
-    Body s = Body::makeBox({ 0, 0 }, { 5, 5 }, 0.0f);
-    check(s.isStatic() && s.invMass == 0.0f, "mass 0 makes a body static");
+    Body staticBox = Body::makeBox({ 0, 0 }, { 5, 5 }, 0.0f);
+    check(staticBox.isStatic() && staticBox.invMass == 0.0f, "mass 0 makes a body static");
 
     // Lowest point on screen = largest y; a flat bottom means two vertices share it
-    std::vector<Vector2D> sq = Body::regularPolygonVertices(4, 10.0f);
-    float lowest = -1e9f;
-    for (const Vector2D& v : sq) lowest = std::max(lowest, v.y);
-    int onBottom = 0;
-    for (const Vector2D& v : sq) if (near(v.y, lowest, 1e-4f)) ++onBottom;
-    check(sq.size() == 4 && onBottom == 2, "regular square has a flat bottom edge");
+    std::vector<Vector2D> squareVertices = Body::regularPolygonVertices(4, 10.0f);
+    float lowestY = -1e9f;
+    for (const Vector2D& vertex : squareVertices) lowestY = std::max(lowestY, vertex.y);
+    int verticesOnBottom = 0;
+    for (const Vector2D& vertex : squareVertices) {
+        if (near(vertex.y, lowestY, 1e-4f)) ++verticesOnBottom;
+    }
+    check(squareVertices.size() == 4 && verticesOnBottom == 2, "regular square has a flat bottom edge");
     check(Body::regularPolygonVertices(2, 10.0f).empty(), "fewer than 3 sides gives no polygon");
 
-    Body hex = Body::makeRegularPolygon({ 100, 100 }, 6, 20.0f);
-    check(hex.containsPoint({ 100, 100 }) && !hex.containsPoint({ 125, 100 }), "polygon containsPoint");
-    check(near(hex.aabbMax().x - hex.aabbMin().x, 40.0f, 0.5f) ||
-          near(hex.aabbMax().x - hex.aabbMin().x, 34.64f, 0.5f), "polygon bounding box width");
+    Body hexagon = Body::makeRegularPolygon({ 100, 100 }, 6, 20.0f);
+    check(hexagon.containsPoint({ 100, 100 }) && !hexagon.containsPoint({ 125, 100 }), "polygon containsPoint");
+    check(near(hexagon.aabbMax().x - hexagon.aabbMin().x, 40.0f, 0.5f) ||
+          near(hexagon.aabbMax().x - hexagon.aabbMin().x, 34.64f, 0.5f), "polygon bounding box width");
 
-    Body f = Body::makeCircle({ 0, 0 }, 5.0f);
-    f.applyForce({ 1, 2 });
-    f.applyForce({ 3, 4 });
-    check(near(f.force.x, 4.0f, 1e-6f) && near(f.force.y, 6.0f, 1e-6f), "applyForce accumulates");
-    f.clearForce();
-    check(f.force.x == 0.0f && f.force.y == 0.0f, "clearForce resets");
+    Body forceBody = Body::makeCircle({ 0, 0 }, 5.0f);
+    forceBody.applyForce({ 1, 2 });
+    forceBody.applyForce({ 3, 4 });
+    check(near(forceBody.force.x, 4.0f, 1e-6f) && near(forceBody.force.y, 6.0f, 1e-6f),
+          "applyForce accumulates");
+    forceBody.clearForce();
+    check(forceBody.force.x == 0.0f && forceBody.force.y == 0.0f, "clearForce resets");
 }
 
 static void testNarrowPhase() {
     section("Collision detection");
-    Manifold m = testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeCircle({ 15, 0 }, 10));
-    check(m.colliding && near(m.normal.x, 1.0f, 1e-4f) && near(m.penetration, 5.0f, 1e-4f),
+    Manifold manifold = testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeCircle({ 15, 0 }, 10));
+    check(manifold.colliding && near(manifold.normal.x, 1.0f, 1e-4f) &&
+          near(manifold.penetration, 5.0f, 1e-4f),
           "circle-circle: normal points A->B, depth 5");
     check(!testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeCircle({ 25, 0 }, 10)).colliding,
           "circle-circle with gap: no collision");
 
-    m = testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeCircle({ 0, 0 }, 10));
-    check(m.colliding && std::isfinite(m.normal.x), "identical positions: no NaN");
+    manifold = testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeCircle({ 0, 0 }, 10));
+    check(manifold.colliding && std::isfinite(manifold.normal.x), "identical positions: no NaN");
 
-    m = testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeBox({ 15, 0 }, { 10, 10 }));
-    check(m.colliding && m.normal.x > 0.9f, "circle-box: normal points circle->box");
-    m = testCollision(Body::makeBox({ 15, 0 }, { 10, 10 }), Body::makeCircle({ 0, 0 }, 10));
-    check(m.colliding && m.normal.x < -0.9f, "box-circle (reversed order): normal flips");
+    manifold = testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeBox({ 15, 0 }, { 10, 10 }));
+    check(manifold.colliding && manifold.normal.x > 0.9f, "circle-box: normal points circle->box");
+    manifold = testCollision(Body::makeBox({ 15, 0 }, { 10, 10 }), Body::makeCircle({ 0, 0 }, 10));
+    check(manifold.colliding && manifold.normal.x < -0.9f, "box-circle (reversed order): normal flips");
 
     check(testCollision(Body::makeBox({ 0, 0 }, { 10, 10 }), Body::makeBox({ 15, 0 }, { 10, 10 })).colliding,
           "box-box overlap");
     check(!testCollision(Body::makeBox({ 0, 0 }, { 10, 10 }), Body::makeBox({ 25, 0 }, { 10, 10 })).colliding,
           "box-box with gap");
 
-    m = testCollision(Body::makeRegularPolygon({ 0, 0 }, 6, 20), Body::makeRegularPolygon({ 30, 0 }, 6, 20));
-    check(m.colliding && m.normal.x > 0.5f, "hexagon-hexagon (SAT) overlap");
+    manifold = testCollision(Body::makeRegularPolygon({ 0, 0 }, 6, 20),
+      Body::makeRegularPolygon({ 30, 0 }, 6, 20));
+    check(manifold.colliding && manifold.normal.x > 0.5f, "hexagon-hexagon (SAT) overlap");
     check(!testCollision(Body::makeRegularPolygon({ 0, 0 }, 6, 20),
                          Body::makeRegularPolygon({ 60, 0 }, 6, 20)).colliding,
           "hexagon-hexagon with gap");
@@ -153,8 +160,8 @@ static void testNarrowPhase() {
           "circle-triangle near miss (edge 11.7 away, radius 10)");
 
     Body floor = Body::makeBox({ 640, 700 }, { 640, 20 }, 0.0f);
-    m = testCollision(Body::makeCircle({ 200, 685 }, 20), floor);
-    check(m.colliding && m.normal.y > 0.9f, "circle centre inside floor resolves upward");
+    manifold = testCollision(Body::makeCircle({ 200, 685 }, 20), floor);
+    check(manifold.colliding && manifold.normal.y > 0.9f, "circle centre inside floor resolves upward");
 }
 
 static void testResponse() {
@@ -169,11 +176,12 @@ static void testResponse() {
           "elastic equal masses swap velocities");
     check(near(bodies[0].velocity.x + bodies[1].velocity.x, 50.0f, 1e-3f), "momentum conserved");
 
-    std::vector<Body> statics = { Body::makeBox({ 0, 0 }, { 10, 10 }, 0.0f),
-                                  Body::makeBox({ 5, 0 }, { 10, 10 }, 0.0f) };
-    CollisionSystem sys(80.0f);
-    sys.step(statics);
-    check(statics[0].position.x == 0.0f && statics[1].position.x == 5.0f, "static bodies never move");
+    std::vector<Body> staticBodies = { Body::makeBox({ 0, 0 }, { 10, 10 }, 0.0f),
+                                       Body::makeBox({ 5, 0 }, { 10, 10 }, 0.0f) };
+    CollisionSystem collisionSystem(80.0f);
+    collisionSystem.step(staticBodies);
+    check(staticBodies[0].position.x == 0.0f && staticBodies[1].position.x == 5.0f,
+          "static bodies never move");
 }
 
 static void testForces() {
@@ -195,10 +203,11 @@ static void testForces() {
     moving[1].velocity = { 100, 0 };
     DragForce drag(0.1f, 0.001f);
     drag.apply(moving);
-    float decelLight = -moving[0].force.x * moving[0].invMass;
-    float decelHeavy = -moving[1].force.x * moving[1].invMass;
+    float lightBodyDeceleration = -moving[0].force.x * moving[0].invMass;
+    float heavyBodyDeceleration = -moving[1].force.x * moving[1].invMass;
     check(moving[0].force.x < 0.0f, "drag opposes velocity");
-    check(decelHeavy < decelLight, "heavier body slows down less under the same drag");
+    check(heavyBodyDeceleration < lightBodyDeceleration,
+          "heavier body slows down less under the same drag");
 
     // Spring: stretched pulls together, compressed pushes apart, equal and opposite
     std::vector<Body> pair = { Body::makeCircle({ 0, 0 }, 5), Body::makeCircle({ 150, 0 }, 5) };
@@ -219,10 +228,11 @@ static void testForces() {
     std::vector<std::unique_ptr<ForceGenerator>> generators;
     generators.push_back(std::make_unique<GravityForce>(Vector2D{ 0, 100 }));
     generators.push_back(std::make_unique<DragForce>(1.0f, 0.0f));
-    std::vector<Body> one = { Body::makeCircle({ 0, 0 }, 5, 2.0f) };
-    one[0].velocity = { 10, 0 };
-    for (const auto& g : generators) g->apply(one);
-    check(near(one[0].force.y, 200.0f, 1e-3f) && near(one[0].force.x, -10.0f, 1e-3f),
+    std::vector<Body> singleBody = { Body::makeCircle({ 0, 0 }, 5, 2.0f) };
+    singleBody[0].velocity = { 10, 0 };
+    for (const auto& generator : generators) generator->apply(singleBody);
+    check(near(singleBody[0].force.y, 200.0f, 1e-3f) &&
+          near(singleBody[0].force.x, -10.0f, 1e-3f),
           "virtual apply() runs the right generator through a base pointer");
     check(generators[0]->name() == "Gravity" && generators[1]->name() == "Drag", "virtual name()");
 
@@ -234,375 +244,412 @@ static void testIntegrator() {
     section("Integration");
 
     // Constant force: v = a t after n steps (exact for semi-implicit Euler)
-    std::vector<Body> b = { Body::makeCircle({ 0, 0 }, 5, 2.0f) };
+    std::vector<Body> bodies = { Body::makeCircle({ 0, 0 }, 5, 2.0f) };
     Integrator integrator;
-    for (int i = 0; i < 60; ++i) {
-        b[0].applyForce({ 20.0f, 0.0f }); // a = 10
-        integrator.step(b, 1.0f / 60.0f);
+    for (int stepIndex = 0; stepIndex < 60; ++stepIndex) {
+        bodies[0].applyForce({ 20.0f, 0.0f }); // a = 10
+        integrator.step(bodies, 1.0f / 60.0f);
     }
-    check(near(b[0].velocity.x, 10.0f, 1e-3f), "constant force: v = a t after 1 s");
-    check(b[0].force.x == 0.0f, "integrator clears forces after each step");
+    check(near(bodies[0].velocity.x, 10.0f, 1e-3f), "constant force: v = a t after 1 s");
+    check(bodies[0].force.x == 0.0f, "integrator clears forces after each step");
 
-    std::vector<Body> st = { Body::makeBox({ 5, 5 }, { 1, 1 }, 0.0f) };
-    st[0].applyForce({ 1000, 1000 });
-    integrator.step(st, 1.0f);
-    check(st[0].position.x == 5.0f, "integrator never moves static bodies");
+    std::vector<Body> staticBodies = { Body::makeBox({ 5, 5 }, { 1, 1 }, 0.0f) };
+    staticBodies[0].applyForce({ 1000, 1000 });
+    integrator.step(staticBodies, 1.0f);
+    check(staticBodies[0].position.x == 5.0f, "integrator never moves static bodies");
 
     // Energy: semi-implicit stays bounded on a spring, explicit grows
     auto springEnergy = [](IntegrationMethod method) {
         std::vector<Body> bodies = { Body::makeBox({ 0, 0 }, { 1, 1 }, 0.0f), Body::makeCircle({ 120, 0 }, 5, 1.0f) };
-        SpringForce s(0, 1, 100.0f, 100.0f);
-        Integrator in(method);
-        for (int i = 0; i < 600; ++i) { s.apply(bodies); in.step(bodies, 1.0f / 60.0f); }
-        float ext = bodies[1].position.x - 100.0f;
-        return 0.5f * bodies[1].velocity.lengthSquared() + 0.5f * 100.0f * ext * ext;
+        SpringForce spring(0, 1, 100.0f, 100.0f);
+        Integrator methodIntegrator(method);
+        for (int stepIndex = 0; stepIndex < 600; ++stepIndex) {
+            spring.apply(bodies);
+            methodIntegrator.step(bodies, 1.0f / 60.0f);
+        }
+        float extension = bodies[1].position.x - 100.0f;
+        return 0.5f * bodies[1].velocity.lengthSquared() +
+          0.5f * 100.0f * extension * extension;
     };
     const float startEnergy = 0.5f * 100.0f * 20.0f * 20.0f;
-    float semi = springEnergy(IntegrationMethod::SemiImplicitEuler);
-    float expl = springEnergy(IntegrationMethod::ExplicitEuler);
-    check(std::fabs(semi - startEnergy) / startEnergy < 0.2f,
+    float semiImplicitEnergy = springEnergy(IntegrationMethod::SemiImplicitEuler);
+    float explicitEnergy = springEnergy(IntegrationMethod::ExplicitEuler);
+    check(std::fabs(semiImplicitEnergy - startEnergy) / startEnergy < 0.2f,
           "semi-implicit Euler keeps spring energy bounded (10 s)",
-          "start " + fmt(startEnergy) + " end " + fmt(semi));
-    check(expl > 2.0f * startEnergy, "explicit Euler gains energy (why it is not used)",
-          "end " + fmt(expl));
+          "start " + fmt(startEnergy) + " end " + fmt(semiImplicitEnergy));
+    check(explicitEnergy > 2.0f * startEnergy, "explicit Euler gains energy (why it is not used)",
+          "end " + fmt(explicitEnergy));
 }
 
 // Flies the projectile preset's launch with no drag and returns the measured range
-static float measureRange(float dt) {
-    World world(W, H);
+static float measureRange(float deltaTime) {
+    World world(WINDOW_WIDTH, WINDOW_HEIGHT);
     world.loadPreset(static_cast<int>(Preset::Projectile));
-    int ball = static_cast<int>(world.getBodies().size()) - 1;
+    int projectileIndex = static_cast<int>(world.getBodies().size()) - 1;
 
-    const float startX = world.getBodies()[ball].position.x;
-    const float startY = world.getBodies()[ball].position.y;
+    const float startX = world.getBodies()[projectileIndex].position.x;
+    const float startY = world.getBodies()[projectileIndex].position.y;
 
     // The landing step can also contain the floor bounce, which flips the
     // velocity, so the crossing is detected from position once past the apex
-    float prevX = startX, prevY = startY;
+    float previousX = startX, previousY = startY;
     bool pastApex = false;
-    for (int i = 0; i < 100000; ++i) {
-        world.step(dt);
-        const Body& b = world.getBodies()[ball];
-        if (b.velocity.y > 0.0f) pastApex = true;
-        if (pastApex && b.position.y >= startY) {
+    for (int stepIndex = 0; stepIndex < 100000; ++stepIndex) {
+        world.step(deltaTime);
+        const Body& projectile = world.getBodies()[projectileIndex];
+        if (projectile.velocity.y > 0.0f) pastApex = true;
+        if (pastApex && projectile.position.y >= startY) {
             // Interpolate the exact crossing of the launch height
-            float t = (startY - prevY) / (b.position.y - prevY);
-            return (prevX + t * (b.position.x - prevX)) - startX;
+            float interpolationFactor = (startY - previousY) /
+              (projectile.position.y - previousY);
+            return (previousX + interpolationFactor * (projectile.position.x - previousX)) - startX;
         }
-        prevX = b.position.x;
-        prevY = b.position.y;
+        previousX = projectile.position.x;
+        previousY = projectile.position.y;
     }
     return -1.0f;
 }
 
 static void testProjectile() {
     section("Projectile accuracy");
-    const float g = 900.0f;
+    const float gravityAcceleration = 900.0f;
     const float angle = PROJECTILE_ANGLE_DEGREES * 3.14159265f / 180.0f;
-    const float expected = PROJECTILE_SPEED * PROJECTILE_SPEED * std::sin(2.0f * angle) / g;
+    const float expected = PROJECTILE_SPEED * PROJECTILE_SPEED *
+      std::sin(2.0f * angle) / gravityAcceleration;
 
-    float r60 = measureRange(1.0f / 60.0f);
-    float r240 = measureRange(1.0f / 240.0f);
-    float e60 = std::fabs(r60 - expected) / expected * 100.0f;
-    float e240 = std::fabs(r240 - expected) / expected * 100.0f;
+    float rangeAt60Hz = measureRange(1.0f / 60.0f);
+    float rangeAt240Hz = measureRange(1.0f / 240.0f);
+    float percentErrorAt60Hz = std::fabs(rangeAt60Hz - expected) / expected * 100.0f;
+    float percentErrorAt240Hz = std::fabs(rangeAt240Hz - expected) / expected * 100.0f;
 
     std::cout << "         expected range " << fmt(expected) << " px; measured "
-              << fmt(r60) << " (1/60 s, " << fmt(e60) << "% off), "
-              << fmt(r240) << " (1/240 s, " << fmt(e240) << "% off)\n";
-    check(e60 < 3.0f, "range matches v^2 sin(2a) / g within 3% at 60 steps/s");
-    check(e240 < e60 && e240 < 1.0f, "error shrinks with a smaller timestep (within 1% at 240 steps/s)");
+              << fmt(rangeAt60Hz) << " (1/60 s, " << fmt(percentErrorAt60Hz) << "% off), "
+              << fmt(rangeAt240Hz) << " (1/240 s, " << fmt(percentErrorAt240Hz) << "% off)\n";
+    check(percentErrorAt60Hz < 3.0f, "range matches v^2 sin(2a) / g within 3% at 60 steps/s");
+    check(percentErrorAt240Hz < percentErrorAt60Hz && percentErrorAt240Hz < 1.0f,
+          "error shrinks with a smaller timestep (within 1% at 240 steps/s)");
 }
 
 static void testSpringPeriod() {
     section("Spring oscillation");
-    World world(W, H);
+    World world(WINDOW_WIDTH, WINDOW_HEIGHT);
     world.gravity().setEnabled(false);
     disableDrag(world);
 
     int anchor = world.addBody(Body::makeBox({ 400, 300 }, { 5, 5 }, 0.0f));
-    int bob = world.addBody(Body::makeCircle({ 520, 300 }, 8, 1.0f)); // stretched by 20
-    world.addSpring(SpringForce(anchor, bob, 100.0f, 100.0f));
+    int oscillatorBodyIndex = world.addBody(Body::makeCircle({ 520, 300 }, 8, 1.0f)); // stretched by 20
+    world.addSpring(SpringForce(anchor, oscillatorBodyIndex, 100.0f, 100.0f));
 
-    const float dt = 1.0f / 240.0f;
-    float lastSign = 0.0f, firstCross = -1.0f, thirdCross = -1.0f;
+    const float deltaTime = 1.0f / 240.0f;
+    float lastVelocitySign = 0.0f, firstCrossingTime = -1.0f, thirdCrossingTime = -1.0f;
     int crossings = 0;
-    for (int i = 1; i < 2400 && thirdCross < 0.0f; ++i) {
-        world.step(dt);
-        float v = world.getBodies()[bob].velocity.x;
-        float sign = (v > 0.0f) ? 1.0f : (v < 0.0f ? -1.0f : 0.0f);
-        if (lastSign != 0.0f && sign != 0.0f && sign != lastSign) {
+    for (int stepIndex = 1; stepIndex < 2400 && thirdCrossingTime < 0.0f; ++stepIndex) {
+        world.step(deltaTime);
+        float horizontalVelocity = world.getBodies()[oscillatorBodyIndex].velocity.x;
+        float velocitySign = (horizontalVelocity > 0.0f) ? 1.0f :
+          (horizontalVelocity < 0.0f ? -1.0f : 0.0f);
+        if (lastVelocitySign != 0.0f && velocitySign != 0.0f &&
+            velocitySign != lastVelocitySign) {
             ++crossings;
-            if (crossings == 1) firstCross = i * dt;
-            if (crossings == 3) thirdCross = i * dt;
+            if (crossings == 1) firstCrossingTime = stepIndex * deltaTime;
+            if (crossings == 3) thirdCrossingTime = stepIndex * deltaTime;
         }
-        if (sign != 0.0f) lastSign = sign;
+        if (velocitySign != 0.0f) lastVelocitySign = velocitySign;
     }
-    float measured = thirdCross - firstCross; // two half-periods
-    float expected = 2.0f * 3.14159265f * std::sqrt(1.0f / 100.0f);
-    check(near(measured, expected, expected * 0.02f), "period matches 2*pi*sqrt(m/k) within 2%",
-          "measured " + fmt(measured) + " s, expected " + fmt(expected) + " s");
+    float measuredPeriod = thirdCrossingTime - firstCrossingTime; // two half-periods
+    float expectedPeriod = 2.0f * 3.14159265f * std::sqrt(1.0f / 100.0f);
+    check(near(measuredPeriod, expectedPeriod, expectedPeriod * 0.02f),
+          "period matches 2*pi*sqrt(m/k) within 2%",
+          "measured " + fmt(measuredPeriod) + " s, expected " + fmt(expectedPeriod) + " s");
 }
 
 static void testWorld() {
     section("World");
-    World world(W, H);
+    World world(WINDOW_WIDTH, WINDOW_HEIGHT);
     check(world.getBodies().size() == 3, "new world has floor and two walls");
-    bool allStatic = true;
-    for (const Body& b : world.getBodies()) allStatic = allStatic && b.isStatic();
-    check(allStatic, "floor and walls are static");
+    bool allBodiesStatic = true;
+    for (const Body& body : world.getBodies()) {
+        allBodiesStatic = allBodiesStatic && body.isStatic();
+    }
+    check(allBodiesStatic, "floor and walls are static");
     check(world.getHistory().undoCount() == 0, "starting scene is not on the undo stack");
 
     // Fixed timestep: velocity counts the steps taken (drag off, g*dt = 15 per step)
     disableDrag(world);
-    int ball = world.addBody(Body::makeCircle({ 640, 100 }, 10));
+    int bodyIndex = world.addBody(Body::makeCircle({ 640, 100 }, 10));
     world.update(0.055f); // 3.3 steps' worth: 3 full steps, remainder carried over
-    check(near(world.getBodies()[ball].velocity.y, 45.0f, 1e-2f), "update(0.055 s) runs 3 fixed steps",
-          "vy " + fmt(world.getBodies()[ball].velocity.y));
+    check(near(world.getBodies()[bodyIndex].velocity.y, 45.0f, 1e-2f),
+          "update(0.055 s) runs 3 fixed steps",
+          "vy " + fmt(world.getBodies()[bodyIndex].velocity.y));
     world.update(1.0f); // capped: at most 5 steps
-    check(near(world.getBodies()[ball].velocity.y, 120.0f, 1e-2f), "a long frame is capped at 5 steps",
-          "vy " + fmt(world.getBodies()[ball].velocity.y));
+    check(near(world.getBodies()[bodyIndex].velocity.y, 120.0f, 1e-2f),
+          "a long frame is capped at 5 steps",
+          "vy " + fmt(world.getBodies()[bodyIndex].velocity.y));
 
-    check(world.bodyAt(world.getBodies()[ball].position) == ball, "bodyAt finds the body");
+    check(world.bodyAt(world.getBodies()[bodyIndex].position) == bodyIndex, "bodyAt finds the body");
     check(world.bodyAt({ 640, 400 }) == -1, "bodyAt on empty space returns -1");
 
-    world.dragBody(ball, { 300, 300 });
-    check(near(world.getBodies()[ball].position.x, 300.0f, 1e-4f) &&
-          world.getBodies()[ball].velocity.length() == 0.0f, "dragBody moves and stills the body");
+    world.dragBody(bodyIndex, { 300, 300 });
+    check(near(world.getBodies()[bodyIndex].position.x, 300.0f, 1e-4f) &&
+          world.getBodies()[bodyIndex].velocity.length() == 0.0f,
+          "dragBody moves and stills the body");
     world.dragBody(0, { 0, 0 });
-    check(world.getBodies()[0].position.x == W / 2.0f, "dragBody ignores static bodies");
+    check(world.getBodies()[0].position.x == WINDOW_WIDTH / 2.0f, "dragBody ignores static bodies");
     world.dragBody(99, { 0, 0 });
     check(true, "dragBody with a bad index is ignored safely");
 }
 
 static void testWorldBehaviour() {
     section("Simulation behaviour");
-    const float ground = floorTop(H);
+    const float ground = floorTop(WINDOW_HEIGHT);
 
     // Every shape lands on the floor across the whole width
-    const char* names[] = { "circle", "box", "triangle", "hexagon" };
-    float xs[] = { 50, 400, 640, 900, 1230 };
-    for (int s = 0; s < 4; ++s) {
-        bool ok = true;
-        std::string where;
-        for (float x : xs) {
-            World world(W, H);
-            Body b = (s == 0) ? Body::makeCircle({ x, 400 }, 20)
-                   : (s == 1) ? Body::makeBox({ x, 400 }, { 20, 20 })
-                   : (s == 2) ? Body::makeRegularPolygon({ x, 400 }, 3, 20)
-                              : Body::makeRegularPolygon({ x, 400 }, 6, 20);
-            int i = world.addBody(b);
+    const char* shapeNames[] = { "circle", "box", "triangle", "hexagon" };
+    float horizontalPositions[] = { 50, 400, 640, 900, 1230 };
+    for (int shapeIndex = 0; shapeIndex < 4; ++shapeIndex) {
+        bool shapeLandedAtEveryPosition = true;
+        std::string failedPositions;
+        for (float positionX : horizontalPositions) {
+            World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+            Body spawnedBody = (shapeIndex == 0) ? Body::makeCircle({ positionX, 400 }, 20)
+                               : (shapeIndex == 1) ? Body::makeBox({ positionX, 400 }, { 20, 20 })
+                               : (shapeIndex == 2) ? Body::makeRegularPolygon({ positionX, 400 }, 3, 20)
+                                                   : Body::makeRegularPolygon({ positionX, 400 }, 6, 20);
+            int bodyIndex = world.addBody(spawnedBody);
             runSteps(world, 300);
-            const Body& r = world.getBodies()[i];
-            if (!(near(r.aabbMax().y, ground, 3.0f) && std::fabs(r.velocity.y) < 0.5f)) {
-                ok = false;
-                where += " x=" + fmt(x);
+            const Body& settledBody = world.getBodies()[bodyIndex];
+            if (!(near(settledBody.aabbMax().y, ground, 3.0f) &&
+                  std::fabs(settledBody.velocity.y) < 0.5f)) {
+                shapeLandedAtEveryPosition = false;
+                failedPositions += " x=" + fmt(positionX);
             }
         }
-        check(ok, std::string(names[s]) + " lands and rests on the floor at 5 positions", "failed at" + where);
+        check(shapeLandedAtEveryPosition,
+              std::string(shapeNames[shapeIndex]) + " lands and rests on the floor at 5 positions",
+              "failed at" + failedPositions);
     }
 
     // Bounce then settle
     {
-        World world(W, H);
-        int i = world.addBody(Body::makeCircle({ 300, 100 }, 20));
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+        int bodyIndex = world.addBody(Body::makeCircle({ 300, 100 }, 20));
         bool bounced = false;
-        for (int f = 0; f < 600; ++f) {
-            world.step(DT);
-            if (world.getBodies()[i].velocity.y < -50.0f) bounced = true;
+        for (int frameIndex = 0; frameIndex < 600; ++frameIndex) {
+            world.step(FIXED_TIMESTEP);
+            if (world.getBodies()[bodyIndex].velocity.y < -50.0f) bounced = true;
         }
         check(bounced, "a high drop bounces");
-        check(std::fabs(world.getBodies()[i].velocity.y) < 0.5f, "and then settles");
+        check(std::fabs(world.getBodies()[bodyIndex].velocity.y) < 0.5f, "and then settles");
     }
 
     // Two-body stack
     {
-        World world(W, H);
-        int box = world.addBody(Body::makeBox({ 300, ground - 40 }, { 20, 20 }));
-        int hex = world.addBody(Body::makeRegularPolygon({ 300, ground - 100 }, 6, 20));
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+        int boxBodyIndex = world.addBody(Body::makeBox({ 300, ground - 40 }, { 20, 20 }));
+        int hexagonBodyIndex = world.addBody(Body::makeRegularPolygon({ 300, ground - 100 }, 6, 20));
         runSteps(world, 400);
-        bool stable = std::fabs(world.getBodies()[box].velocity.y) < 1.0f &&
-                      std::fabs(world.getBodies()[hex].velocity.y) < 1.0f &&
-                      world.getBodies()[box].aabbMax().y < ground + 4.0f;
+        bool stable = std::fabs(world.getBodies()[boxBodyIndex].velocity.y) < 1.0f &&
+                      std::fabs(world.getBodies()[hexagonBodyIndex].velocity.y) < 1.0f &&
+                      world.getBodies()[boxBodyIndex].aabbMax().y < ground + 4.0f;
         check(stable, "a two-body stack is stable");
     }
 
     // Friction stops a sliding box
     {
-        World world(W, H);
-        Body b = Body::makeBox({ 200, ground - 20 }, { 20, 20 });
-        b.velocity = { 300, 0 };
-        int i = world.addBody(b);
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+        Body slidingBox = Body::makeBox({ 200, ground - 20 }, { 20, 20 });
+        slidingBox.velocity = { 300, 0 };
+        int bodyIndex = world.addBody(slidingBox);
         runSteps(world, 240);
-        check(std::fabs(world.getBodies()[i].velocity.x) < 0.5f, "friction stops a sliding box");
+        check(std::fabs(world.getBodies()[bodyIndex].velocity.x) < 0.5f, "friction stops a sliding box");
     }
 
     // Drag slows a body in flight
     {
-        World with(W, H), without(W, H);
-        disableDrag(without);
-        Body b = Body::makeCircle({ 640, 100 }, 10);
-        b.velocity = { 400, 0 };
-        int a = with.addBody(b), c = without.addBody(b);
-        runSteps(with, 20);
-        runSteps(without, 20);
-        check(with.getBodies()[a].velocity.x < without.getBodies()[c].velocity.x,
+        World worldWithDrag(WINDOW_WIDTH, WINDOW_HEIGHT);
+        World worldWithoutDrag(WINDOW_WIDTH, WINDOW_HEIGHT);
+        disableDrag(worldWithoutDrag);
+        Body movingBody = Body::makeCircle({ 640, 100 }, 10);
+        movingBody.velocity = { 400, 0 };
+        int draggedBodyIndex = worldWithDrag.addBody(movingBody);
+        int undraggedBodyIndex = worldWithoutDrag.addBody(movingBody);
+        runSteps(worldWithDrag, 20);
+        runSteps(worldWithoutDrag, 20);
+        check(worldWithDrag.getBodies()[draggedBodyIndex].velocity.x <
+              worldWithoutDrag.getBodies()[undraggedBodyIndex].velocity.x,
               "air drag reduces horizontal speed during flight");
     }
 
     // Walls keep fast bodies inside
     {
-        World world(W, H);
-        Body b = Body::makeCircle({ 640, ground - 20 }, 20);
-        b.velocity = { 1500, 0 };
-        int i = world.addBody(b);
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+        Body fastBody = Body::makeCircle({ 640, ground - 20 }, 20);
+        fastBody.velocity = { 1500, 0 };
+        int bodyIndex = world.addBody(fastBody);
         runSteps(world, 240);
-        float x = world.getBodies()[i].position.x;
-        check(x > 0.0f && x < W, "side walls keep a fast body inside the window", "x=" + fmt(x));
+        float bodyPositionX = world.getBodies()[bodyIndex].position.x;
+        check(bodyPositionX > 0.0f && bodyPositionX < WINDOW_WIDTH,
+              "side walls keep a fast body inside the window", "x=" + fmt(bodyPositionX));
     }
 
     // Stress test
     {
-        World world(W, H);
-        for (int i = 0; i < 100; ++i) {
-            Vector2D p{ 100.0f + (i % 20) * 54.0f, 100.0f + (i / 20) * 50.0f };
-            int k = i % 3;
-            world.addBody(k == 0 ? Body::makeCircle(p, 15)
-                        : k == 1 ? Body::makeBox(p, { 15, 15 })
-                                 : Body::makeRegularPolygon(p, 5, 15));
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+        for (int bodyIndex = 0; bodyIndex < 100; ++bodyIndex) {
+            Vector2D spawnPosition{ 100.0f + (bodyIndex % 20) * 54.0f,
+                                    100.0f + (bodyIndex / 20) * 50.0f };
+            int shapeIndex = bodyIndex % 3;
+            world.addBody(shapeIndex == 0 ? Body::makeCircle(spawnPosition, 15)
+                        : shapeIndex == 1 ? Body::makeBox(spawnPosition, { 15, 15 })
+                                          : Body::makeRegularPolygon(spawnPosition, 5, 15));
         }
-        auto t0 = std::chrono::high_resolution_clock::now();
+        auto simulationStart = std::chrono::high_resolution_clock::now();
         runSteps(world, 300);
-        auto t1 = std::chrono::high_resolution_clock::now();
-        float ms = std::chrono::duration<float, std::milli>(t1 - t0).count() / 300.0f;
+        auto simulationEnd = std::chrono::high_resolution_clock::now();
+        float averageStepTimeMilliseconds =
+          std::chrono::duration<float, std::milli>(simulationEnd - simulationStart).count() / 300.0f;
 
-        bool finite = true, inside = true;
-        for (const Body& b : world.getBodies()) {
-            finite = finite && isFinite(b);
-            inside = inside && b.position.y < H && b.position.x > 0.0f && b.position.x < W;
+        bool allBodiesFinite = true, allBodiesInside = true;
+        for (const Body& body : world.getBodies()) {
+            allBodiesFinite = allBodiesFinite && isFinite(body);
+            allBodiesInside = allBodiesInside && body.position.y < WINDOW_HEIGHT &&
+                              body.position.x > 0.0f && body.position.x < WINDOW_WIDTH;
         }
-        check(finite, "100 bodies: no NaN or infinity");
-        check(inside, "100 bodies: none escape the floor or walls");
-        check(ms < 8.0f, "100 bodies: physics fits the frame budget", fmt(ms) + " ms/step");
-        std::cout << "         (" << fmt(ms) << " ms per step; 16.7 ms available per frame)\n";
+        check(allBodiesFinite, "100 bodies: no NaN or infinity");
+        check(allBodiesInside, "100 bodies: none escape the floor or walls");
+        check(averageStepTimeMilliseconds < 8.0f, "100 bodies: physics fits the frame budget",
+              fmt(averageStepTimeMilliseconds) + " ms/step");
+        std::cout << "         (" << fmt(averageStepTimeMilliseconds)
+                  << " ms per step; 16.7 ms available per frame)\n";
     }
 }
 
 static void testEventsAndHistory() {
     section("Event queue");
-    EventQueue q;
-    q.push(SandboxEvent::preset(1));
-    q.push(SandboxEvent::preset(2));
-    q.push(SandboxEvent::preset(3));
-    SandboxEvent e;
-    bool fifo = q.pop(e) && e.value == 1 && q.pop(e) && e.value == 2 && q.pop(e) && e.value == 3;
-    check(fifo, "events come out in the order they went in (FIFO)");
-    check(!q.pop(e) && q.empty(), "pop on an empty queue returns false");
-    q.push(SandboxEvent::undo());
-    q.clear();
-    check(q.empty(), "clear empties the queue");
+    EventQueue eventQueue;
+    eventQueue.push(SandboxEvent::preset(1));
+    eventQueue.push(SandboxEvent::preset(2));
+    eventQueue.push(SandboxEvent::preset(3));
+    SandboxEvent event;
+    bool eventsMaintainFifoOrder = eventQueue.pop(event) && event.value == 1 &&
+      eventQueue.pop(event) && event.value == 2 &&
+      eventQueue.pop(event) && event.value == 3;
+    check(eventsMaintainFifoOrder, "events come out in the order they went in (FIFO)");
+    check(!eventQueue.pop(event) && eventQueue.empty(), "pop on an empty queue returns false");
+    eventQueue.push(SandboxEvent::undo());
+    eventQueue.clear();
+    check(eventQueue.empty(), "clear empties the queue");
 
-    World world(W, H);
-    std::size_t base = world.getBodies().size();
-    q.push(SandboxEvent::spawn(Body::makeCircle({ 300, 300 }, 10)));
-    q.push(SandboxEvent::spawn(Body::makeCircle({ 400, 300 }, 10)));
-    world.processEvents(q);
-    check(world.getBodies().size() == base + 2 && q.empty(), "processEvents applies spawns and empties the queue");
+    World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+    std::size_t initialBodyCount = world.getBodies().size();
+    eventQueue.push(SandboxEvent::spawn(Body::makeCircle({ 300, 300 }, 10)));
+    eventQueue.push(SandboxEvent::spawn(Body::makeCircle({ 400, 300 }, 10)));
+    world.processEvents(eventQueue);
+    check(world.getBodies().size() == initialBodyCount + 2 && eventQueue.empty(),
+          "processEvents applies spawns and empties the queue");
 
-    q.push(SandboxEvent::undo());
-    world.processEvents(q);
-    check(world.getBodies().size() == base + 1, "undo removes the last spawn");
-    q.push(SandboxEvent::redo());
-    world.processEvents(q);
-    check(world.getBodies().size() == base + 2, "redo brings it back");
+    eventQueue.push(SandboxEvent::undo());
+    world.processEvents(eventQueue);
+    check(world.getBodies().size() == initialBodyCount + 1, "undo removes the last spawn");
+    eventQueue.push(SandboxEvent::redo());
+    world.processEvents(eventQueue);
+    check(world.getBodies().size() == initialBodyCount + 2, "redo brings it back");
 
-    q.push(SandboxEvent::reset());
-    world.processEvents(q);
-    check(world.getBodies().size() == base, "reset clears to floor and walls");
-    q.push(SandboxEvent::undo());
-    world.processEvents(q);
-    check(world.getBodies().size() == base + 2, "reset can be undone");
+    eventQueue.push(SandboxEvent::reset());
+    world.processEvents(eventQueue);
+    check(world.getBodies().size() == initialBodyCount, "reset clears to floor and walls");
+    eventQueue.push(SandboxEvent::undo());
+    world.processEvents(eventQueue);
+    check(world.getBodies().size() == initialBodyCount + 2, "reset can be undone");
 
-    q.push(SandboxEvent::preset(99));
-    std::size_t before = world.getBodies().size();
-    world.processEvents(q);
-    check(world.getBodies().size() == before, "an invalid preset number is ignored");
+    eventQueue.push(SandboxEvent::preset(99));
+    std::size_t bodyCountBeforeInvalidPreset = world.getBodies().size();
+    world.processEvents(eventQueue);
+    check(world.getBodies().size() == bodyCountBeforeInvalidPreset,
+          "an invalid preset number is ignored");
 
-    WorldState bad = world.getState();
-    bad.springs.emplace_back(0, 500, 10.0f, 1.0f);
-    q.push(SandboxEvent::replaceScene(bad));
-    world.processEvents(q);
+    WorldState invalidScene = world.getState();
+    invalidScene.springs.emplace_back(0, 500, 10.0f, 1.0f);
+    eventQueue.push(SandboxEvent::replaceScene(invalidScene));
+    world.processEvents(eventQueue);
     check(world.getSprings().empty(), "replaceScene drops springs pointing at missing bodies");
 
     section("Undo / redo stacks");
     SceneHistory history(3);
-    WorldState current;
-    check(!history.undo(current), "undo with empty history returns false");
-    for (int i = 1; i <= 5; ++i) {
-        current.bodies.assign(i - 1, Body());
-        history.record(current); // records states with 0..4 bodies
+    WorldState currentState;
+    check(!history.undo(currentState), "undo with empty history returns false");
+    for (int snapshotIndex = 1; snapshotIndex <= 5; ++snapshotIndex) {
+        currentState.bodies.assign(snapshotIndex - 1, Body());
+        history.record(currentState); // records states with 0..4 bodies
     }
-    current.bodies.assign(5, Body());
+    currentState.bodies.assign(5, Body());
     check(history.undoCount() == 3, "capacity limits the undo stack (oldest dropped)");
-    history.undo(current);
-    check(current.bodies.size() == 4, "undo restores the most recent snapshot (LIFO)");
-    history.undo(current);
-    history.undo(current);
-    check(current.bodies.size() == 2 && !history.undo(current), "oldest kept snapshot is the limit");
-    history.redo(current);
-    check(current.bodies.size() == 3, "redo moves forward again");
-    history.record(current);
+    history.undo(currentState);
+    check(currentState.bodies.size() == 4, "undo restores the most recent snapshot (LIFO)");
+    history.undo(currentState);
+    history.undo(currentState);
+    check(currentState.bodies.size() == 2 && !history.undo(currentState),
+          "oldest kept snapshot is the limit");
+    history.redo(currentState);
+    check(currentState.bodies.size() == 3, "redo moves forward again");
+    history.record(currentState);
     check(!history.canRedo(), "a new action clears the redo stack");
 }
 
 static void testPresets() {
     section("Presets");
-    for (int n = 1; n <= PRESET_COUNT; ++n) {
-        World world(W, H);
-        bool ok = world.loadPreset(n) && world.getBodies().size() > 3;
-        check(ok, "preset " + std::to_string(n) + " loads: " + presetName(static_cast<Preset>(n)));
+    for (int presetNumber = 1; presetNumber <= PRESET_COUNT; ++presetNumber) {
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
+        bool presetLoaded = world.loadPreset(presetNumber) && world.getBodies().size() > 3;
+        check(presetLoaded, "preset " + std::to_string(presetNumber) + " loads: " +
+              presetName(static_cast<Preset>(presetNumber)));
     }
-    World none(W, H);
-    check(!none.loadPreset(0) && !none.loadPreset(PRESET_COUNT + 1), "out-of-range presets are refused");
+    World emptyWorld(WINDOW_WIDTH, WINDOW_HEIGHT);
+    check(!emptyWorld.loadPreset(0) && !emptyWorld.loadPreset(PRESET_COUNT + 1),
+          "out-of-range presets are refused");
 
     // Elastic: velocities swap
     {
-        World world(W, H);
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
         world.loadPreset(static_cast<int>(Preset::ElasticCollision));
         runSteps(world, 120);
-        const auto& b = world.getBodies();
-        float vMoving = b[3].velocity.x, vResting = b[4].velocity.x;
-        check(near(vMoving, 0.0f, 3.0f) && near(vResting, 300.0f, 3.0f),
+        const auto& bodies = world.getBodies();
+        float movingBodySpeed = bodies[3].velocity.x, restingBodySpeed = bodies[4].velocity.x;
+        check(near(movingBodySpeed, 0.0f, 3.0f) && near(restingBodySpeed, 300.0f, 3.0f),
               "elastic preset: moving ball stops, resting ball leaves at 300",
-              "v1=" + fmt(vMoving) + " v2=" + fmt(vResting));
+              "v1=" + fmt(movingBodySpeed) + " v2=" + fmt(restingBodySpeed));
     }
 
     // Inelastic: common velocity 4*300/5 = 240, momentum conserved
     {
-        World world(W, H);
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
         world.loadPreset(static_cast<int>(Preset::InelasticCollision));
         runSteps(world, 120);
-        const auto& b = world.getBodies();
-        float vh = b[3].velocity.x, vl = b[4].velocity.x;
-        float momentum = b[3].mass * vh + b[4].mass * vl;
-        check(near(vh, 240.0f, 5.0f) && near(vl, 240.0f, 5.0f), "inelastic preset: both move at 240",
-              "heavy=" + fmt(vh) + " light=" + fmt(vl));
+        const auto& bodies = world.getBodies();
+        float heavyBodySpeed = bodies[3].velocity.x, lightBodySpeed = bodies[4].velocity.x;
+        float momentum = bodies[3].mass * heavyBodySpeed + bodies[4].mass * lightBodySpeed;
+        check(near(heavyBodySpeed, 240.0f, 5.0f) && near(lightBodySpeed, 240.0f, 5.0f),
+              "inelastic preset: both move at 240",
+              "heavy=" + fmt(heavyBodySpeed) + " light=" + fmt(lightBodySpeed));
         check(near(momentum, 1200.0f, 12.0f), "inelastic preset: momentum conserved (1200)", fmt(momentum));
     }
 
     // Free fall: different masses released together stay level (a = g for all)
     {
-        World world(W, H);
+        World world(WINDOW_WIDTH, WINDOW_HEIGHT);
         world.loadPreset(static_cast<int>(Preset::FreeFall));
         runSteps(world, 30); // 0.5 s, before any of them reaches the floor
-        const auto& b = world.getBodies();
-        bool level = near(b[3].position.y, b[4].position.y, 0.01f) &&
-                     near(b[4].position.y, b[5].position.y, 0.01f);
-        bool sameSpeed = near(b[3].velocity.y, b[5].velocity.y, 0.01f);
-        check(b.size() == 6 && b[3].mass != b[5].mass, "free fall preset: three bodies of different mass");
-        check(level && sameSpeed, "free fall preset: all masses fall together",
-              "y=" + fmt(b[3].position.y) + "," + fmt(b[4].position.y) + "," + fmt(b[5].position.y));
-        check(near(b[3].velocity.y, 450.0f, 2.0f), "free fall preset: v = g t (900 * 0.5 = 450)",
-              fmt(b[3].velocity.y));
+        const auto& bodies = world.getBodies();
+        bool bodiesStayLevel = near(bodies[3].position.y, bodies[4].position.y, 0.01f) &&
+                               near(bodies[4].position.y, bodies[5].position.y, 0.01f);
+        bool bodiesHaveSameSpeed = near(bodies[3].velocity.y, bodies[5].velocity.y, 0.01f);
+        check(bodies.size() == 6 && bodies[3].mass != bodies[5].mass,
+              "free fall preset: three bodies of different mass");
+        check(bodiesStayLevel && bodiesHaveSameSpeed, "free fall preset: all masses fall together",
+              "y=" + fmt(bodies[3].position.y) + "," + fmt(bodies[4].position.y) + "," +
+              fmt(bodies[5].position.y));
+        check(near(bodies[3].velocity.y, 450.0f, 2.0f), "free fall preset: v = g t (900 * 0.5 = 450)",
+              fmt(bodies[3].velocity.y));
     }
 }
 
@@ -610,111 +657,122 @@ static void testLauncher() {
     section("Launcher and editable values");
     using namespace sandbox;
 
-    Vector2D up = launchVelocity(90.0f, 100.0f);
-    Vector2D right = launchVelocity(0.0f, 100.0f);
-    check(near(up.x, 0.0f, 1e-3f) && near(up.y, -100.0f, 1e-3f), "90 degrees points straight up");
-    check(near(right.x, 100.0f, 1e-3f) && near(right.y, 0.0f, 1e-3f), "0 degrees points right");
+    Vector2D upwardVelocity = launchVelocity(90.0f, 100.0f);
+    Vector2D rightwardVelocity = launchVelocity(0.0f, 100.0f);
+    check(near(upwardVelocity.x, 0.0f, 1e-3f) && near(upwardVelocity.y, -100.0f, 1e-3f),
+          "90 degrees points straight up");
+    check(near(rightwardVelocity.x, 100.0f, 1e-3f) && near(rightwardVelocity.y, 0.0f, 1e-3f),
+          "0 degrees points right");
 
-    AppSettings s;
-    s.launchAngleDegrees = -10.0f;
-    s.launchSpeed = 5000.0f;
-    s.launchMass = 0.0f;
-    clampLaunchSettings(s);
-    check(near(s.launchAngleDegrees, 350.0f, 1e-3f), "angle wraps into 0-360");
-    check(near(s.launchSpeed, MAX_LAUNCH_SPEED, 1e-3f), "speed is limited to the feasible maximum");
-    check(near(s.launchMass, MIN_BODY_MASS, 1e-3f), "mass is limited to the feasible minimum");
+    AppSettings settings;
+    settings.launchAngleDegrees = -10.0f;
+    settings.launchSpeed = 5000.0f;
+    settings.launchMass = 0.0f;
+    clampLaunchSettings(settings);
+    check(near(settings.launchAngleDegrees, 350.0f, 1e-3f), "angle wraps into 0-360");
+    check(near(settings.launchSpeed, MAX_LAUNCH_SPEED, 1e-3f), "speed is limited to the feasible maximum");
+    check(near(settings.launchMass, MIN_BODY_MASS, 1e-3f), "mass is limited to the feasible minimum");
 
-    AppSettings shot;
-    shot.currentShape = SpawnShape::Square;
-    shot.launchAngleDegrees = 30.0f;
-    shot.launchSpeed = 400.0f;
-    shot.launchMass = 7.5f;
-    Body b = createLaunchedBody({ 100, 100 }, shot);
-    check(b.shapeType == ShapeType::Polygon && b.localVertices.size() == 4, "launched body has the chosen shape");
-    check(near(b.mass, 7.5f, 1e-4f) && near(b.velocity.length(), 400.0f, 1e-2f),
+    AppSettings shotSettings;
+    shotSettings.currentShape = SpawnShape::Square;
+    shotSettings.launchAngleDegrees = 30.0f;
+    shotSettings.launchSpeed = 400.0f;
+    shotSettings.launchMass = 7.5f;
+    Body launchedBody = createLaunchedBody({ 100, 100 }, shotSettings);
+    check(launchedBody.shapeType == ShapeType::Polygon && launchedBody.localVertices.size() == 4,
+          "launched body has the chosen shape");
+    check(near(launchedBody.mass, 7.5f, 1e-4f) && near(launchedBody.velocity.length(), 400.0f, 1e-2f),
           "launched body has the chosen mass and speed");
 
-    AppSettings read;
-    readBodyIntoSettings(b, read);
-    check(near(read.launchAngleDegrees, 30.0f, 0.01f) && near(read.launchSpeed, 400.0f, 0.01f) &&
-          near(read.launchMass, 7.5f, 1e-4f), "selecting a body reads back its angle, speed and mass");
+    AppSettings selectedBodySettings;
+    readBodyIntoSettings(launchedBody, selectedBodySettings);
+    check(near(selectedBodySettings.launchAngleDegrees, 30.0f, 0.01f) &&
+          near(selectedBodySettings.launchSpeed, 400.0f, 0.01f) &&
+          near(selectedBodySettings.launchMass, 7.5f, 1e-4f),
+          "selecting a body reads back its angle, speed and mass");
 
-    Vector2D p = launchPoint(H, 20.0f);
-    check(p.y + 20.0f < floorTop(H) && p.x > WALL_THICKNESS, "launch point is inside the arena, above the floor");
+    Vector2D launchPosition = launchPoint(WINDOW_HEIGHT, 20.0f);
+    check(launchPosition.y + 20.0f < floorTop(WINDOW_HEIGHT) && launchPosition.x > WALL_THICKNESS,
+          "launch point is inside the arena, above the floor");
 
     // Many shots in a row, fired whenever the launcher is clear (as the program does),
     // all fly and stay inside the arena
-    World world(W, H);
+    World world(WINDOW_WIDTH, WINDOW_HEIGHT);
     world.loadPreset(static_cast<int>(Preset::Projectile));
-    AppSettings fire;
-    fire.launchSpeed = MAX_LAUNCH_SPEED;
-    const Vector2D start = launchPoint(H, fire.spawnSize);
-    int fired = 0;
-    for (int step = 0; step < 1200 && fired < 20; ++step) {
-        if (isAreaClear(world.getState(), start, fire.spawnSize)) {
-            fire.launchAngleDegrees = 10.0f + 4.0f * static_cast<float>(fired);
-            world.addBody(createLaunchedBody(start, fire));
-            ++fired;
+    AppSettings rapidFireSettings;
+    rapidFireSettings.launchSpeed = MAX_LAUNCH_SPEED;
+    const Vector2D rapidFirePosition = launchPoint(WINDOW_HEIGHT, rapidFireSettings.spawnSize);
+    int shotsFired = 0;
+    for (int stepIndex = 0; stepIndex < 1200 && shotsFired < 20; ++stepIndex) {
+        if (isAreaClear(world.getState(), rapidFirePosition, rapidFireSettings.spawnSize)) {
+            rapidFireSettings.launchAngleDegrees =
+              10.0f + 4.0f * static_cast<float>(shotsFired);
+            world.addBody(createLaunchedBody(rapidFirePosition, rapidFireSettings));
+            ++shotsFired;
         }
-        world.step(DT);
+        world.step(FIXED_TIMESTEP);
     }
     check(!isAreaClear(world.getState(), world.getBodies().back().position, 1.0f),
           "the launcher reports blocked while a body sits on it");
     runSteps(world, 600);
-    bool inside = true;
+    bool allBodiesInside = true;
     for (const Body& body : world.getBodies()) {
         if (body.isStatic()) continue;
-        inside = inside && isFinite(body) && body.position.x > 0.0f && body.position.x < W &&
-                 body.position.y < H;
+        allBodiesInside = allBodiesInside && isFinite(body) && body.position.x > 0.0f &&
+                          body.position.x < WINDOW_WIDTH && body.position.y < WINDOW_HEIGHT;
     }
     check(countDynamicBodies(world.getState()) == 21, "20 extra shots added (21 moving bodies)");
-    check(inside, "20 shots at maximum speed all stay inside the arena");
+    check(allBodiesInside, "20 shots at maximum speed all stay inside the arena");
 }
 
 static void testSceneFiles() {
     section("Scene files and shape creation");
     using namespace sandbox;
 
-    Body tri = createShape({ 200, 100 }, SpawnShape::Triangle, 20);
-    check(tri.shapeType == ShapeType::Polygon && tri.localVertices.size() == 3, "createShape: triangle");
-    Body sq = createShape({ 200, 100 }, SpawnShape::Square, 20);
-    check(sq.shapeType == ShapeType::Polygon && sq.localVertices.size() == 4, "createShape: square");
+    Body triangleBody = createShape({ 200, 100 }, SpawnShape::Triangle, 20);
+    check(triangleBody.shapeType == ShapeType::Polygon && triangleBody.localVertices.size() == 3,
+          "createShape: triangle");
+    Body squareBody = createShape({ 200, 100 }, SpawnShape::Square, 20);
+    check(squareBody.shapeType == ShapeType::Polygon && squareBody.localVertices.size() == 4,
+          "createShape: square");
     check(createShape({ 0, 0 }, SpawnShape::Circle, 20).shapeType == ShapeType::Circle, "createShape: circle");
     check(shapeName(SpawnShape::Square) == "Square", "shapeName");
 
     // The program no longer creates springs, but the file format still supports them
-    World world(W, H);
+    World world(WINDOW_WIDTH, WINDOW_HEIGHT);
     world.loadPreset(static_cast<int>(Preset::FreeFall));
     WorldState original = world.getState();
     original.springs.emplace_back(3, 4, 100.0f, 10.0f);
     original.settings.restitution = 0.7f;
 
-    const std::string file = "test_scene.txt";
-    check(saveScene(original, file), "saveScene writes the file");
+    const std::string sceneFilePath = "test_scene.txt";
+    check(saveScene(original, sceneFilePath), "saveScene writes the file");
 
     WorldState loaded;
-    bool ok = loadScene(loaded, file);
-    check(ok && loaded.bodies.size() == original.bodies.size(), "loadScene reads all bodies back");
-    check(ok && loaded.springs.size() == original.springs.size(), "springs survive save and load");
-    check(ok && near(loaded.settings.restitution, 0.7f, 1e-4f), "settings survive save and load");
-    check(ok && loaded.bodies[0].isStatic(), "static bodies stay static");
+    bool sceneLoaded = loadScene(loaded, sceneFilePath);
+    check(sceneLoaded && loaded.bodies.size() == original.bodies.size(), "loadScene reads all bodies back");
+    check(sceneLoaded && loaded.springs.size() == original.springs.size(), "springs survive save and load");
+    check(sceneLoaded && near(loaded.settings.restitution, 0.7f, 1e-4f), "settings survive save and load");
+    check(sceneLoaded && loaded.bodies[0].isStatic(), "static bodies stay static");
 
-    { std::ofstream old("test_old.txt"); old << "1\n0 100 100 0 0 1 10 10 10 0\n"; }
+    { std::ofstream oldSceneFile("test_old.txt"); oldSceneFile << "1\n0 100 100 0 0 1 10 10 10 0\n"; }
     WorldState oldScene;
     check(loadScene(oldScene, "test_old.txt") && oldScene.bodies.size() == 1 && oldScene.springs.empty(),
           "files without spring/settings sections still load");
 
-    { std::ofstream bad("test_bad.txt"); bad << "2\n0 1 2 3 4 1 10 10 10 0\n7 garbage\n"; }
-    WorldState keep = original;
-    check(!loadScene(keep, "test_bad.txt") && keep.bodies.size() == original.bodies.size(),
+    { std::ofstream damagedSceneFile("test_bad.txt"); damagedSceneFile << "2\n0 1 2 3 4 1 10 10 10 0\n7 garbage\n"; }
+    WorldState preservedState = original;
+    check(!loadScene(preservedState, "test_bad.txt") &&
+          preservedState.bodies.size() == original.bodies.size(),
           "a damaged file is rejected and the scene is kept");
 
-    { std::ofstream bs("test_badspring.txt"); bs << "1\n0 1 1 0 0 1 10 10 10 0\nsprings 1\n0 9 10 1 0\n"; }
-    check(!loadScene(keep, "test_badspring.txt"), "a spring pointing at a missing body is rejected");
+    { std::ofstream invalidSpringSceneFile("test_badspring.txt"); invalidSpringSceneFile << "1\n0 1 1 0 0 1 10 10 10 0\nsprings 1\n0 9 10 1 0\n"; }
+    check(!loadScene(preservedState, "test_badspring.txt"),
+          "a spring pointing at a missing body is rejected");
 
-    check(!loadScene(keep, "does_not_exist.txt"), "a missing file returns false");
+    check(!loadScene(preservedState, "does_not_exist.txt"), "a missing file returns false");
 
-    std::remove(file.c_str());
+    std::remove(sceneFilePath.c_str());
     std::remove("test_old.txt");
     std::remove("test_bad.txt");
     std::remove("test_badspring.txt");

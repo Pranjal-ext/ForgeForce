@@ -1,295 +1,302 @@
 #include "CollisionSystem.hpp"
 
+#include <algorithm>
 #include <limits>
 
 // Narrow-phase tests
 
-Manifold testCircleCircle(const Body& a, const Body& b) {
-  Manifold m;
+Manifold testCircleCircle(const Body& firstBody, const Body& secondBody) {
+  Manifold manifold;
 
-  Vector2D delta = b.position - a.position;
-  float distSquared = delta.lengthSquared();
-  float radiusSum = a.radius + b.radius;
+  Vector2D separation = secondBody.position - firstBody.position;
+  float distanceSquared = separation.lengthSquared();
+  float radiusSum = firstBody.radius + secondBody.radius;
 
-  if (distSquared > radiusSum * radiusSum) return m;
+  if (distanceSquared > radiusSum * radiusSum) return manifold;
 
-  float dist = std::sqrt(distSquared);
+  float distance = std::sqrt(distanceSquared);
 
-  m.colliding = true;
+  manifold.colliding = true;
   // Identical centres have no direction, so pick one
-  m.normal = (dist > 1e-6f) ? delta * (1.0f / dist) : Vector2D{ 1.0f, 0.0f };
-  m.penetration = radiusSum - dist;
-  return m;
+  manifold.normal = (distance > 1e-6f) ? separation * (1.0f / distance) : Vector2D{ 1.0f, 0.0f };
+  manifold.penetration = radiusSum - distance;
+  return manifold;
 }
 
 Manifold testCircleBox(const Body& circle, const Body& box) {
-  Manifold m;
+  Manifold manifold;
 
-  Vector2D lo = box.boxMin();
-  Vector2D hi = box.boxMax();
+  Vector2D boxMinimum = box.boxMin();
+  Vector2D boxMaximum = box.boxMax();
 
   // Closest point on the box to the circle's centre
   Vector2D closest{
-    std::clamp(circle.position.x, lo.x, hi.x),
-    std::clamp(circle.position.y, lo.y, hi.y)
+    std::clamp(circle.position.x, boxMinimum.x, boxMaximum.x),
+    std::clamp(circle.position.y, boxMinimum.y, boxMaximum.y)
   };
 
-  Vector2D delta = closest - circle.position;
-  float distSquared = delta.lengthSquared();
+  Vector2D separation = closest - circle.position;
+  float distanceSquared = separation.lengthSquared();
 
-  if (distSquared > circle.radius * circle.radius) return m;
+  if (distanceSquared > circle.radius * circle.radius) return manifold;
 
-  float dist = std::sqrt(distSquared);
-  m.colliding = true;
+  float distance = std::sqrt(distanceSquared);
+  manifold.colliding = true;
 
-  if (dist > 1e-6f) {
-    m.normal = delta * (1.0f / dist);
-    m.penetration = circle.radius - dist;
-    return m;
+  if (distance > 1e-6f) {
+    manifold.normal = separation * (1.0f / distance);
+    manifold.penetration = circle.radius - distance;
+    return manifold;
   }
 
   // Centre is inside the box: push out through the nearest face
-  float toLeft = circle.position.x - lo.x;
-  float toRight = hi.x - circle.position.x;
-  float toTop = circle.position.y - lo.y;
-  float toBottom = hi.y - circle.position.y;
+  float distanceToLeft = circle.position.x - boxMinimum.x;
+  float distanceToRight = boxMaximum.x - circle.position.x;
+  float distanceToTop = circle.position.y - boxMinimum.y;
+  float distanceToBottom = boxMaximum.y - circle.position.y;
 
-  float nearest = toLeft;
+  float nearestFaceDistance = distanceToLeft;
   Vector2D outward{ -1.0f, 0.0f };
-  if (toRight < nearest) { nearest = toRight; outward = { 1.0f, 0.0f }; }
-  if (toTop < nearest) { nearest = toTop; outward = { 0.0f, -1.0f }; }
-  if (toBottom < nearest) { nearest = toBottom; outward = { 0.0f, 1.0f }; }
+  if (distanceToRight < nearestFaceDistance) { nearestFaceDistance = distanceToRight; outward = { 1.0f, 0.0f }; }
+  if (distanceToTop < nearestFaceDistance) { nearestFaceDistance = distanceToTop; outward = { 0.0f, -1.0f }; }
+  if (distanceToBottom < nearestFaceDistance) { nearestFaceDistance = distanceToBottom; outward = { 0.0f, 1.0f }; }
 
   // Normal points circle -> box, i.e. opposite to the face the circle exits through
-  m.normal = -outward;
-  m.penetration = circle.radius + nearest;
-  return m;
+  manifold.normal = -outward;
+  manifold.penetration = circle.radius + nearestFaceDistance;
+  return manifold;
 }
 
-Manifold testBoxBox(const Body& a, const Body& b) {
-  Manifold m;
+Manifold testBoxBox(const Body& firstBody, const Body& secondBody) {
+  Manifold manifold;
 
-  Vector2D aMin = a.boxMin(), aMax = a.boxMax();
-  Vector2D bMin = b.boxMin(), bMax = b.boxMax();
+  Vector2D firstMinimum = firstBody.boxMin(), firstMaximum = firstBody.boxMax();
+  Vector2D secondMinimum = secondBody.boxMin(), secondMaximum = secondBody.boxMax();
 
-  float overlapX = std::min(aMax.x, bMax.x) - std::max(aMin.x, bMin.x);
-  float overlapY = std::min(aMax.y, bMax.y) - std::max(aMin.y, bMin.y);
+  float overlapX = std::min(firstMaximum.x, secondMaximum.x) - std::max(firstMinimum.x, secondMinimum.x);
+  float overlapY = std::min(firstMaximum.y, secondMaximum.y) - std::max(firstMinimum.y, secondMinimum.y);
 
-  if (overlapX <= 0.0f || overlapY <= 0.0f) return m;
+  if (overlapX <= 0.0f || overlapY <= 0.0f) return manifold;
 
-  m.colliding = true;
+  manifold.colliding = true;
 
   // Separate along the axis of least overlap
   if (overlapX < overlapY) {
-    m.normal = (a.position.x < b.position.x) ? Vector2D{ 1.0f, 0.0f } : Vector2D{ -1.0f, 0.0f };
-    m.penetration = overlapX;
+    manifold.normal = (firstBody.position.x < secondBody.position.x) ? Vector2D{ 1.0f, 0.0f } : Vector2D{ -1.0f, 0.0f };
+    manifold.penetration = overlapX;
   } else {
-    m.normal = (a.position.y < b.position.y) ? Vector2D{ 0.0f, 1.0f } : Vector2D{ 0.0f, -1.0f };
-    m.penetration = overlapY;
+    manifold.normal = (firstBody.position.y < secondBody.position.y) ? Vector2D{ 0.0f, 1.0f } : Vector2D{ 0.0f, -1.0f };
+    manifold.penetration = overlapY;
   }
-  return m;
+  return manifold;
 }
 
 namespace {
 
 // Projects vertices onto an axis and returns the covered interval
-void projectVertices(const std::vector<Vector2D>& verts, const Vector2D& axis,
-  float& outMin, float& outMax) {
-  outMin = outMax = verts[0].dot(axis);
-  for (const Vector2D& v : verts) {
-    float p = v.dot(axis);
-    outMin = std::min(outMin, p);
-    outMax = std::max(outMax, p);
+void projectVertices(const std::vector<Vector2D>& vertices, const Vector2D& axis,
+  float& projectedMinimum, float& projectedMaximum) {
+  projectedMinimum = projectedMaximum = vertices[0].dot(axis);
+  for (const Vector2D& vertex : vertices) {
+    float projection = vertex.dot(axis);
+    projectedMinimum = std::min(projectedMinimum, projection);
+    projectedMaximum = std::max(projectedMaximum, projection);
   }
 }
 
 // Unit normal of edge i of a polygon (zero for degenerate edges)
-Vector2D edgeNormal(const std::vector<Vector2D>& verts, std::size_t i) {
-  Vector2D edge = verts[(i + 1) % verts.size()] - verts[i];
+Vector2D edgeNormal(const std::vector<Vector2D>& vertices, std::size_t edgeIndex) {
+  Vector2D edge = vertices[(edgeIndex + 1) % vertices.size()] - vertices[edgeIndex];
   return Vector2D{ -edge.y, edge.x }.normalized();
 }
 
 } // namespace
 
-Manifold testPolygonPolygon(const Body& a, const Body& b) {
-  Manifold m;
+Manifold testPolygonPolygon(const Body& firstBody, const Body& secondBody) {
+  Manifold manifold;
 
-  std::vector<Vector2D> va = a.worldVertices();
-  std::vector<Vector2D> vb = b.worldVertices();
-  if (va.size() < 3 || vb.size() < 3) return m;
+  std::vector<Vector2D> firstVertices = firstBody.worldVertices();
+  std::vector<Vector2D> secondVertices = secondBody.worldVertices();
+  if (firstVertices.size() < 3 || secondVertices.size() < 3) return manifold;
 
-  float minOverlap = std::numeric_limits<float>::max();
+  float minimumOverlap = std::numeric_limits<float>::max();
   Vector2D bestAxis;
 
   // Separating Axis Theorem: test every edge normal of both shapes.
   // A gap on any axis means the shapes are not touching.
-  auto testAxesOf = [&](const std::vector<Vector2D>& verts) {
-    for (std::size_t i = 0; i < verts.size(); ++i) {
-      Vector2D axis = edgeNormal(verts, i);
+  auto testAxesOf = [&](const std::vector<Vector2D>& vertices) {
+    for (std::size_t edgeIndex = 0; edgeIndex < vertices.size(); ++edgeIndex) {
+      Vector2D axis = edgeNormal(vertices, edgeIndex);
       if (axis.lengthSquared() < 0.5f) continue; // degenerate edge
 
-      float minA, maxA, minB, maxB;
-      projectVertices(va, axis, minA, maxA);
-      projectVertices(vb, axis, minB, maxB);
+      float firstMinimum, firstMaximum, secondMinimum, secondMaximum;
+      projectVertices(firstVertices, axis, firstMinimum, firstMaximum);
+      projectVertices(secondVertices, axis, secondMinimum, secondMaximum);
 
-      float overlap = std::min(maxA, maxB) - std::max(minA, minB);
+      float overlap = std::min(firstMaximum, secondMaximum) -
+        std::max(firstMinimum, secondMinimum);
       if (overlap <= 0.0f) return false;
 
-      if (overlap < minOverlap) {
-        minOverlap = overlap;
+      if (overlap < minimumOverlap) {
+        minimumOverlap = overlap;
         bestAxis = axis;
       }
     }
     return true;
   };
 
-  if (!testAxesOf(va) || !testAxesOf(vb)) return m;
+  if (!testAxesOf(firstVertices) || !testAxesOf(secondVertices)) return manifold;
 
-  // Make the normal point from a toward b
-  if (bestAxis.dot(b.position - a.position) < 0.0f) bestAxis = -bestAxis;
+  // Make the normal point from the first body toward the second
+  if (bestAxis.dot(secondBody.position - firstBody.position) < 0.0f) bestAxis = -bestAxis;
 
-  m.colliding = true;
-  m.normal = bestAxis;
-  m.penetration = minOverlap;
-  return m;
+  manifold.colliding = true;
+  manifold.normal = bestAxis;
+  manifold.penetration = minimumOverlap;
+  return manifold;
 }
 
 Manifold testCirclePolygon(const Body& circle, const Body& polygon) {
-  Manifold m;
+  Manifold manifold;
 
-  std::vector<Vector2D> verts = polygon.worldVertices();
-  if (verts.size() < 3) return m;
+  std::vector<Vector2D> polygonVertices = polygon.worldVertices();
+  if (polygonVertices.size() < 3) return manifold;
 
-  float minOverlap = std::numeric_limits<float>::max();
+  float minimumOverlap = std::numeric_limits<float>::max();
   Vector2D bestAxis;
 
   auto testAxis = [&](const Vector2D& axis) {
-    float polyMin, polyMax;
-    projectVertices(verts, axis, polyMin, polyMax);
+    float polygonMinimum, polygonMaximum;
+    projectVertices(polygonVertices, axis, polygonMinimum, polygonMaximum);
 
-    float centre = circle.position.dot(axis);
-    float circleMin = centre - circle.radius;
-    float circleMax = centre + circle.radius;
+    float circleCenterProjection = circle.position.dot(axis);
+    float circleMinimum = circleCenterProjection - circle.radius;
+    float circleMaximum = circleCenterProjection + circle.radius;
 
-    float overlap = std::min(polyMax, circleMax) - std::max(polyMin, circleMin);
+    float overlap = std::min(polygonMaximum, circleMaximum) -
+      std::max(polygonMinimum, circleMinimum);
     if (overlap <= 0.0f) return false;
 
-    if (overlap < minOverlap) {
-      minOverlap = overlap;
+    if (overlap < minimumOverlap) {
+      minimumOverlap = overlap;
       bestAxis = axis;
     }
     return true;
   };
 
   // Polygon edge normals
-  for (std::size_t i = 0; i < verts.size(); ++i) {
-    Vector2D axis = edgeNormal(verts, i);
+  for (std::size_t edgeIndex = 0; edgeIndex < polygonVertices.size(); ++edgeIndex) {
+    Vector2D axis = edgeNormal(polygonVertices, edgeIndex);
     if (axis.lengthSquared() < 0.5f) continue;
-    if (!testAxis(axis)) return m;
+    if (!testAxis(axis)) return manifold;
   }
 
   // Axis from the circle's centre to the nearest polygon vertex (catches corner contacts)
-  Vector2D nearestVertex = verts[0];
-  for (const Vector2D& v : verts) {
-    if ((v - circle.position).lengthSquared() < (nearestVertex - circle.position).lengthSquared()) {
-      nearestVertex = v;
+  Vector2D nearestVertex = polygonVertices[0];
+  for (const Vector2D& vertex : polygonVertices) {
+    if ((vertex - circle.position).lengthSquared() < (nearestVertex - circle.position).lengthSquared()) {
+      nearestVertex = vertex;
     }
   }
-  Vector2D cornerAxis = (nearestVertex - circle.position).normalized();
-  if (cornerAxis.lengthSquared() > 0.5f && !testAxis(cornerAxis)) return m;
+  Vector2D nearestCornerAxis = (nearestVertex - circle.position).normalized();
+  if (nearestCornerAxis.lengthSquared() > 0.5f && !testAxis(nearestCornerAxis)) return manifold;
 
   // Normal points circle -> polygon
   if (bestAxis.dot(polygon.position - circle.position) < 0.0f) bestAxis = -bestAxis;
 
-  m.colliding = true;
-  m.normal = bestAxis;
-  m.penetration = minOverlap;
-  return m;
+  manifold.colliding = true;
+  manifold.normal = bestAxis;
+  manifold.penetration = minimumOverlap;
+  return manifold;
 }
 
-Manifold testCollision(const Body& a, const Body& b) {
-  const bool aCircle = (a.shapeType == ShapeType::Circle);
-  const bool bCircle = (b.shapeType == ShapeType::Circle);
-  const bool aBox = (a.shapeType == ShapeType::Box);
-  const bool bBox = (b.shapeType == ShapeType::Box);
+Manifold testCollision(const Body& firstBody, const Body& secondBody) {
+  const bool firstIsCircle = (firstBody.shapeType == ShapeType::Circle);
+  const bool secondIsCircle = (secondBody.shapeType == ShapeType::Circle);
+  const bool firstIsBox = (firstBody.shapeType == ShapeType::Box);
+  const bool secondIsBox = (secondBody.shapeType == ShapeType::Box);
 
-  if (aCircle && bCircle) return testCircleCircle(a, b);
-  if (aBox && bBox) return testBoxBox(a, b);
-  if (aCircle && bBox) return testCircleBox(a, b);
+  if (firstIsCircle && secondIsCircle) return testCircleCircle(firstBody, secondBody);
+  if (firstIsBox && secondIsBox) return testBoxBox(firstBody, secondBody);
+  if (firstIsCircle && secondIsBox) return testCircleBox(firstBody, secondBody);
 
-  if (aBox && bCircle) {
-    Manifold m = testCircleBox(b, a);
-    m.normal = -m.normal; // flip so it points a -> b
-    return m;
+  if (firstIsBox && secondIsCircle) {
+    Manifold manifold = testCircleBox(secondBody, firstBody);
+    manifold.normal = -manifold.normal; // flip so it points first -> second
+    return manifold;
   }
 
-  if (aCircle) return testCirclePolygon(a, b);
+  if (firstIsCircle) return testCirclePolygon(firstBody, secondBody);
 
-  if (bCircle) {
-    Manifold m = testCirclePolygon(b, a);
-    m.normal = -m.normal;
-    return m;
+  if (secondIsCircle) {
+    Manifold manifold = testCirclePolygon(secondBody, firstBody);
+    manifold.normal = -manifold.normal;
+    return manifold;
   }
 
   // Box-Polygon or Polygon-Polygon
-  return testPolygonPolygon(a, b);
+  return testPolygonPolygon(firstBody, secondBody);
 }
 
 // Collision response
 
-void resolveCollision(Body& a, Body& b, const Vector2D& normal,
+void resolveCollision(Body& firstBody, Body& secondBody, const Vector2D& normal,
   float restitution, float restitutionThreshold, float friction) {
-  Vector2D relativeVelocity = b.velocity - a.velocity;
-  float velAlongNormal = relativeVelocity.dot(normal);
+  Vector2D relativeVelocity = secondBody.velocity - firstBody.velocity;
+  float relativeSpeedAlongNormal = relativeVelocity.dot(normal);
 
   // Already separating
-  if (velAlongNormal > 0.0f) return;
+  if (relativeSpeedAlongNormal > 0.0f) return;
 
-  float invMassSum = a.invMass + b.invMass;
-  if (invMassSum <= 0.0f) return; // both static
+  float inverseMassSum = firstBody.invMass + secondBody.invMass;
+  if (inverseMassSum <= 0.0f) return; // both static
 
   // Slow impacts are resting contact: no bounce
-  float e = (-velAlongNormal < restitutionThreshold) ? 0.0f : restitution;
+  float effectiveRestitution =
+    (-relativeSpeedAlongNormal < restitutionThreshold) ? 0.0f : restitution;
 
   // Normal impulse: j = -(1 + e) * vRel·n / (1/mA + 1/mB)
-  float j = -(1.0f + e) * velAlongNormal / invMassSum;
+  float normalImpulseMagnitude =
+    -(1.0f + effectiveRestitution) * relativeSpeedAlongNormal / inverseMassSum;
 
-  Vector2D impulse = normal * j;
-  a.velocity -= impulse * a.invMass;
-  b.velocity += impulse * b.invMass;
+  Vector2D normalImpulse = normal * normalImpulseMagnitude;
+  firstBody.velocity -= normalImpulse * firstBody.invMass;
+  secondBody.velocity += normalImpulse * secondBody.invMass;
 
   // Friction impulse along the contact tangent, capped by Coulomb's law (|jt| <= mu * j)
-  relativeVelocity = b.velocity - a.velocity;
+  relativeVelocity = secondBody.velocity - firstBody.velocity;
   Vector2D tangent = relativeVelocity - normal * relativeVelocity.dot(normal);
   float tangentLength = tangent.length();
   if (tangentLength < 1e-6f) return;
   tangent = tangent * (1.0f / tangentLength);
 
-  float jt = -relativeVelocity.dot(tangent) / invMassSum;
-  float maxFriction = friction * j;
-  jt = std::clamp(jt, -maxFriction, maxFriction);
+  float tangentImpulseMagnitude = -relativeVelocity.dot(tangent) / inverseMassSum;
+  float maxFrictionImpulse = friction * normalImpulseMagnitude;
+  tangentImpulseMagnitude =
+    std::clamp(tangentImpulseMagnitude, -maxFrictionImpulse, maxFrictionImpulse);
 
-  Vector2D frictionImpulse = tangent * jt;
-  a.velocity -= frictionImpulse * a.invMass;
-  b.velocity += frictionImpulse * b.invMass;
+  Vector2D frictionImpulse = tangent * tangentImpulseMagnitude;
+  firstBody.velocity -= frictionImpulse * firstBody.invMass;
+  secondBody.velocity += frictionImpulse * secondBody.invMass;
 }
 
-void correctPosition(Body& a, Body& b, const Vector2D& normal, float penetration) {
-  const float percent = 0.2f; // correct 20% of the overlap per frame
-  const float slop = 0.01f; // ignore negligible overlaps
+void correctPosition(Body& firstBody, Body& secondBody, const Vector2D& normal, float penetration) {
+  const float correctionPercent = 0.2f; // correct 20% of the overlap per frame
+  const float penetrationSlop = 0.01f; // ignore negligible overlaps
 
-  float invMassSum = a.invMass + b.invMass;
-  if (invMassSum <= 0.0f) return;
+  float inverseMassSum = firstBody.invMass + secondBody.invMass;
+  if (inverseMassSum <= 0.0f) return;
 
-  float magnitude = std::max(penetration - slop, 0.0f) / invMassSum * percent;
-  Vector2D correction = normal * magnitude;
+  float correctionMagnitude =
+    std::max(penetration - penetrationSlop, 0.0f) / inverseMassSum * correctionPercent;
+  Vector2D correction = normal * correctionMagnitude;
 
-  a.position -= correction * a.invMass;
-  b.position += correction * b.invMass;
+  firstBody.position -= correction * firstBody.invMass;
+  secondBody.position += correction * secondBody.invMass;
 }
 
-void applyVelocitySleep(Body& body, float threshold) {
-  if (body.velocity.length() < threshold) {
+void applyVelocitySleep(Body& body, float velocityThreshold) {
+  if (body.velocity.length() < velocityThreshold) {
     body.velocity = { 0.0f, 0.0f };
   }
 }
@@ -298,9 +305,9 @@ void applyVelocitySleep(Body& body, float threshold) {
 
 SpatialGrid::SpatialGrid(float cellSize) : cellSize(cellSize) {}
 
-int SpatialGrid::cellCoord(float value) const {
+int SpatialGrid::cellCoord(float coordinateValue) const {
   // floor (not truncation) so negative coordinates map to the correct cell
-  return static_cast<int>(std::floor(value / cellSize));
+  return static_cast<int>(std::floor(coordinateValue / cellSize));
 }
 
 void SpatialGrid::clear() {
@@ -308,22 +315,22 @@ void SpatialGrid::clear() {
 }
 
 void SpatialGrid::insert(const std::vector<Body>& bodies) {
-  for (int i = 0; i < static_cast<int>(bodies.size()); ++i) {
-    Vector2D lo = bodies[i].aabbMin();
-    Vector2D hi = bodies[i].aabbMax();
+  for (int bodyIndex = 0; bodyIndex < static_cast<int>(bodies.size()); ++bodyIndex) {
+    Vector2D boundsMinimum = bodies[bodyIndex].aabbMin();
+    Vector2D boundsMaximum = bodies[bodyIndex].aabbMax();
 
     // Skip bodies with invalid positions instead of corrupting the grid
-    if (!std::isfinite(lo.x) || !std::isfinite(lo.y) ||
-      !std::isfinite(hi.x) || !std::isfinite(hi.y)) {
+    if (!std::isfinite(boundsMinimum.x) || !std::isfinite(boundsMinimum.y) ||
+      !std::isfinite(boundsMaximum.x) || !std::isfinite(boundsMaximum.y)) {
       continue;
     }
 
-    int x0 = cellCoord(lo.x), x1 = cellCoord(hi.x);
-    int y0 = cellCoord(lo.y), y1 = cellCoord(hi.y);
+    int firstCellX = cellCoord(boundsMinimum.x), lastCellX = cellCoord(boundsMaximum.x);
+    int firstCellY = cellCoord(boundsMinimum.y), lastCellY = cellCoord(boundsMaximum.y);
 
-    for (int cx = x0; cx <= x1; ++cx) {
-      for (int cy = y0; cy <= y1; ++cy) {
-        cells[{ cx, cy }].push_back(i);
+    for (int cellX = firstCellX; cellX <= lastCellX; ++cellX) {
+      for (int cellY = firstCellY; cellY <= lastCellY; ++cellY) {
+        cells[{ cellX, cellY }].push_back(bodyIndex);
       }
     }
   }
@@ -333,12 +340,13 @@ std::vector<std::pair<int, int>> SpatialGrid::getCandidatePairs() const {
   // Bodies sharing several cells would be paired more than once; the set removes duplicates
   std::set<std::pair<int, int>> uniquePairs;
 
-  for (const auto& entry : cells) {
-    const std::vector<int>& indices = entry.second;
-    for (std::size_t i = 0; i < indices.size(); ++i) {
-      for (std::size_t j = i + 1; j < indices.size(); ++j) {
-        int a = indices[i], b = indices[j];
-        uniquePairs.insert({ std::min(a, b), std::max(a, b) });
+  for (const auto& cellEntry : cells) {
+    const std::vector<int>& bodyIndices = cellEntry.second;
+    for (std::size_t firstIndex = 0; firstIndex < bodyIndices.size(); ++firstIndex) {
+      for (std::size_t secondIndex = firstIndex + 1; secondIndex < bodyIndices.size(); ++secondIndex) {
+        int firstBodyIndex = bodyIndices[firstIndex], secondBodyIndex = bodyIndices[secondIndex];
+        uniquePairs.insert({ std::min(firstBodyIndex, secondBodyIndex),
+          std::max(firstBodyIndex, secondBodyIndex) });
       }
     }
   }
@@ -360,26 +368,27 @@ void CollisionSystem::step(std::vector<Body>& bodies) {
   // Narrow phase: gather every touching pair
   contacts.clear();
   for (const auto& pair : candidates) {
-    const Body& a = bodies[pair.first];
-    const Body& b = bodies[pair.second];
+    const Body& firstBody = bodies[pair.first];
+    const Body& secondBody = bodies[pair.second];
 
-    if (a.invMass <= 0.0f && b.invMass <= 0.0f) continue; // two static bodies
+    if (firstBody.invMass <= 0.0f && secondBody.invMass <= 0.0f) continue; // two static bodies
 
-    Manifold m = testCollision(a, b);
-    if (m.colliding) contacts.push_back({ pair.first, pair.second, m });
+    Manifold manifold = testCollision(firstBody, secondBody);
+    if (manifold.colliding) contacts.push_back({ pair.first, pair.second, manifold });
   }
 
   // Velocity solver: several passes let impulses propagate through stacks
   for (int iteration = 0; iteration < solverIterations; ++iteration) {
-    for (const Contact& c : contacts) {
-      resolveCollision(bodies[c.a], bodies[c.b], c.manifold.normal,
+    for (const Contact& contact : contacts) {
+      resolveCollision(bodies[contact.a], bodies[contact.b], contact.manifold.normal,
         restitution, restitutionThreshold, friction);
     }
   }
 
   // Position correction: once per contact
-  for (const Contact& c : contacts) {
-    correctPosition(bodies[c.a], bodies[c.b], c.manifold.normal, c.manifold.penetration);
+  for (const Contact& contact : contacts) {
+    correctPosition(bodies[contact.a], bodies[contact.b], contact.manifold.normal,
+      contact.manifold.penetration);
   }
 
   // Settle near-stationary bodies

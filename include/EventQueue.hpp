@@ -26,13 +26,13 @@ struct SandboxEvent {
   int value = 0;
   WorldState scene;
 
-  static SandboxEvent spawn(const Body& body);
+  static SandboxEvent spawn(const Body& spawnedBody);
   static SandboxEvent beginDrag();
   static SandboxEvent reset();
   static SandboxEvent undo();
   static SandboxEvent redo();
-  static SandboxEvent preset(int number);
-  static SandboxEvent replaceScene(const WorldState& scene);
+  static SandboxEvent preset(int presetNumber);
+  static SandboxEvent replaceScene(const WorldState& replacementScene);
 };
 
 // EventQueue
@@ -44,8 +44,8 @@ class EventQueue {
 public:
   void push(const SandboxEvent& event) { events.push(event); }
 
-  // Removes the oldest event into `out`; false if the queue is empty
-  bool pop(SandboxEvent& out);
+  // Removes the oldest event into `outputEvent`; false if the queue is empty
+  bool pop(SandboxEvent& outputEvent);
 
   bool empty() const { return events.empty(); }
   std::size_t size() const { return events.size(); }

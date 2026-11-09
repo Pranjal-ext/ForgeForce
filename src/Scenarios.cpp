@@ -21,18 +21,18 @@ Vector2D launchVelocity(float angleDegrees, float speed) {
   return { speed * std::cos(angle), -speed * std::sin(angle) };
 }
 
-int countDynamicBodies(const WorldState& scene) {
-  int count = 0;
-  for (const Body& body : scene.bodies) {
-    if (!body.isStatic()) ++count;
+int countDynamicBodies(const WorldState& worldState) {
+  int dynamicBodyCount = 0;
+  for (const Body& body : worldState.bodies) {
+    if (!body.isStatic()) ++dynamicBodyCount;
   }
-  return count;
+  return dynamicBodyCount;
 }
 
-bool isAreaClear(const WorldState& scene, const Vector2D& point, float radius) {
-  for (const Body& body : scene.bodies) {
+bool isAreaClear(const WorldState& worldState, const Vector2D& spawnPoint, float radius) {
+  for (const Body& body : worldState.bodies) {
     if (body.isStatic()) continue;
-    if ((body.position - point).length() < body.boundingRadius() + radius) return false;
+    if ((body.position - spawnPoint).length() < body.boundingRadius() + radius) return false;
   }
   return true;
 }
@@ -70,9 +70,9 @@ WorldState buildPreset(Preset preset, float width, float height) {
       scene.settings.dragEnabled = false;
 
       const float radius = 12.0f;
-      Body ball = Body::makeCircle(launchPoint(height, radius), radius);
-      ball.velocity = launchVelocity(PROJECTILE_ANGLE_DEGREES, PROJECTILE_SPEED);
-      scene.bodies.push_back(ball);
+      Body projectileBody = Body::makeCircle(launchPoint(height, radius), radius);
+      projectileBody.velocity = launchVelocity(PROJECTILE_ANGLE_DEGREES, PROJECTILE_SPEED);
+      scene.bodies.push_back(projectileBody);
       break;
     }
 
@@ -115,10 +115,11 @@ WorldState buildPreset(Preset preset, float width, float height) {
 
       const float radius = 20.0f;
       const float masses[] = { 1.0f, 5.0f, 15.0f };
-      for (int i = 0; i < 3; ++i) {
+      for (int bodyIndex = 0; bodyIndex < 3; ++bodyIndex) {
         // Kept right of centre so the on-screen help text does not cover them
-        float x = width * (0.45f + 0.15f * static_cast<float>(i));
-        scene.bodies.push_back(Body::makeCircle({ x, FREE_FALL_HEIGHT }, radius, masses[i]));
+        float positionX = width * (0.45f + 0.15f * static_cast<float>(bodyIndex));
+        scene.bodies.push_back(Body::makeCircle(
+          { positionX, FREE_FALL_HEIGHT }, radius, masses[bodyIndex]));
       }
       break;
     }

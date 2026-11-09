@@ -54,7 +54,7 @@ float floorTop(float height);
 // Centre of a body of the given size resting at the launcher, just above the floor
 Vector2D launchPoint(float height, float bodySize);
 
-// Velocity for a launch at angleDegrees above the horizontal
+// Velocity for a launch at an angle above the horizontal
 // (0 = right, 90 = straight up; screen y points down)
 Vector2D launchVelocity(float angleDegrees, float speed);
 
@@ -63,4 +63,4 @@ int countDynamicBodies(const WorldState& scene);
 
 // True if no moving body overlaps a circle of this radius at this point.
 // Spawning onto a fully overlapping body can push one of them through the floor.
-bool isAreaClear(const WorldState& scene, const Vector2D& point, float radius);
+bool isAreaClear(const WorldState& worldState, const Vector2D& spawnPoint, float radius);
