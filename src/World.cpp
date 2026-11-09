@@ -84,7 +84,17 @@ void World::dragBody(int bodyIndex, const Vector2D& position) {
   Body& body = state.bodies[bodyIndex];
   if (body.isStatic()) return;
 
-  body.position = position;
+  // Keep the dragged body inside the walls and above the floor, so it
+  // cannot be pushed deep into a wall and then shot out by the solver
+  const float bodyRadius = body.boundingRadius();
+  const float minX = WALL_THICKNESS + bodyRadius;
+  const float maxX = width - WALL_THICKNESS - bodyRadius;
+  const float maxY = floorTop(height) - bodyRadius;
+  Vector2D target = position;
+  if (minX <= maxX) target.x = std::clamp(target.x, minX, maxX);
+  target.y = std::min(target.y, maxY);
+
+  body.position = target;
   body.velocity = { 0.0f, 0.0f }; // the hand holds it still
 }
 

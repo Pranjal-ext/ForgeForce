@@ -252,6 +252,10 @@ void drawStatus(sf::RenderWindow& window, const sf::Font& font,
 
     status << "\n=== SELECT &    EDIT ===\n";
     status << "  Click body:  select (loads values)     Enter: apply   Del: remove\n";
+    status << "  Drag body:   move it, release to drop\n";
+
+    status << "\n=== FRICTION ===\n";
+    status << "  [ / ]: decrease / increase friction (Shift: fine)\n";
 
     status << "\n=== SHAPES (1-3) ===\n";
     status << "  1: Circle  2: Triangle  3: Square\n";
@@ -299,6 +303,11 @@ std::vector<RawInput> pollInput(sf::RenderWindow& window) {
         inputs.push_back(input);
       }
     }
+    else if (const auto* moved = event->getIf<sf::Event::MouseMoved>()) {
+      input.kind = RawInput::Kind::MouseMove;
+      input.mouse = toWorld(window, moved->position);
+      inputs.push_back(input);
+    }
     else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
       input.kind = RawInput::Kind::Key;
       input.key = keyPressed->code;
@@ -342,6 +351,12 @@ std::vector<RawInput> pollInput(sf::RenderWindow& window) {
         }
         break;
 
+      case sf::Event::MouseMoved:
+        input.kind = RawInput::Kind::MouseMove;
+        input.mouse = toWorld(window, sf::Vector2i(event.mouseMove.x, event.mouseMove.y));
+        inputs.push_back(input);
+        break;
+
       case sf::Event::KeyPressed:
         input.kind = RawInput::Kind::Key;
         input.key = event.key.code;
@@ -361,6 +376,10 @@ std::vector<RawInput> pollInput(sf::RenderWindow& window) {
 #endif
 
 namespace {
+
+// The mouse must move this far (pixels) after pressing on a body before
+// the press becomes a drag, so a plain click still only selects
+const float DRAG_START_DISTANCE = 4.0f;
 
 void stopDragging(AppSettings& settings) {
   settings.dragging = false;
@@ -385,6 +404,26 @@ bool hasValidSelection(const World& world, const AppSettings& settings) {
   return selectedBodyIndex >= 0 &&
     selectedBodyIndex < static_cast<int>(world.getBodies().size()) &&
     !world.getBodies()[selectedBodyIndex].isStatic();
+}
+
+// Changes the scene's friction coefficient by `change`, kept in
+// [MIN_FRICTION, MAX_FRICTION]. Sent as a ReplaceScene event so the
+// change goes through the queue like every other edit and can be undone.
+void changeFriction(float change, const World& world, EventQueue& queue,
+  AppSettings& settings) {
+  WorldState editedWorldState = world.getState();
+  float friction = editedWorldState.settings.friction + change;
+  friction = std::round(friction * 100.0f) / 100.0f; // avoid 0.30000001
+  friction = std::clamp(friction, MIN_FRICTION, MAX_FRICTION);
+
+  if (friction == world.getSettings().friction) {
+    settings.message = "Friction is already at its limit (" + fixed(friction, 2) + ")";
+    return;
+  }
+
+  editedWorldState.settings.friction = friction;
+  queue.push(SandboxEvent::replaceScene(editedWorldState));
+  settings.message = "Friction set to " + fixed(friction, 2);
 }
 
 void loadPresetKey(int presetNumber, EventQueue& queue, AppSettings& settings) {
@@ -416,6 +455,7 @@ void handleKey(const RawInput& input, World& world, EventQueue& queue,
   const float angleStep = input.shift ? 1.0f : 5.0f;
   const float speedStep = input.shift ? 10.0f : 50.0f;
   const float massStep = input.shift ? 0.1f : 0.5f;
+  const float frictionStep = input.shift ? 0.01f : 0.05f;
 
   switch (input.key) {
     case Key::Num1: settings.currentShape = SpawnShape::Circle; break;
@@ -430,6 +470,9 @@ void handleKey(const RawInput& input, World& world, EventQueue& queue,
     case Key::Add: settings.launchMass += massStep; break;
     case Key::Hyphen:
     case Key::Subtract: settings.launchMass -= massStep; break;
+
+    case Key::LBracket: changeFriction(-frictionStep, world, queue, settings); break;
+    case Key::RBracket: changeFriction(frictionStep, world, queue, settings); break;
 
     case Key::Space: {
       Vector2D start = launchPoint(world.getHeight(), settings.spawnSize);
@@ -513,6 +556,8 @@ void handleInput(const RawInput& input, World& world, EventQueue& queue,
         settings.selectedBodyIndex = bodyIndex;
         settings.pressedBodyIndex = bodyIndex;
         settings.pressPoint = input.mouse;
+        settings.dragOffset = world.getBodies()[bodyIndex].position - input.mouse;
+        settings.dragTarget = world.getBodies()[bodyIndex].position;
         readBodyIntoSettings(world.getBodies()[bodyIndex], settings);
         settings.message = "Body " + std::to_string(bodyIndex) +
           " selected: change values, Enter to apply";
@@ -522,7 +567,25 @@ void handleInput(const RawInput& input, World& world, EventQueue& queue,
       break;
     }
 
+    case RawInput::Kind::MouseMove:
+      // A press on a body turns into a drag once the mouse has moved a little
+      if (!settings.dragging && settings.pressedBodyIndex >= 0 &&
+        (input.mouse - settings.pressPoint).length() > DRAG_START_DISTANCE) {
+        queue.push(SandboxEvent::beginDrag()); // undo point before the move
+        settings.dragging = true;
+        settings.draggedBodyIndex = settings.pressedBodyIndex;
+        settings.message = "Dragging body " + std::to_string(settings.draggedBodyIndex) +
+          ": release to drop";
+      }
+      if (settings.dragging) {
+        settings.dragTarget = input.mouse + settings.dragOffset;
+      }
+      break;
+
     case RawInput::Kind::MouseUp:
+      if (settings.dragging) {
+        settings.message = "Body " + std::to_string(settings.draggedBodyIndex) + " dropped";
+      }
       stopDragging(settings);
       break;
 
@@ -700,9 +763,7 @@ int run() {
     world.processEvents(queue);
     // 3. A dragged body follows the mouse
     if (settings.dragging) {
-      sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
-      world.dragBody(settings.draggedBodyIndex,
-        { static_cast<float>(mousePosition.x), static_cast<float>(mousePosition.y) });
+      world.dragBody(settings.draggedBodyIndex, settings.dragTarget);
     }
     // 4. Physics, in fixed steps (restart() is called even when paused,
     // so un-pausing does not produce one huge step)
@@ -719,6 +780,9 @@ for (const SpringForce& spring : world.getSprings()) {
       if (body.isStatic()) continue;
       if (settings.showVelocityVectors) drawVelocityVector(window, body);
       if (settings.showBodyInfo) drawBodyInfo(window, body, font);
+    }
+    if (hasValidSelection(world, settings)) {
+      drawSelection(window, world.getBodies()[settings.selectedBodyIndex]);
     }
  drawStatus(window, font, settings, world);
     window.display();
