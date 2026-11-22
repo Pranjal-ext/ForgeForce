@@ -140,7 +140,7 @@ static void testNarrowPhase() {
     manifold = testCollision(Body::makeCircle({ 0, 0 }, 10), Body::makeBox({ 15, 0 }, { 10, 10 }));
     check(manifold.colliding && manifold.normal.x > 0.9f, "circle-box: normal points circle->box");
     manifold = testCollision(Body::makeBox({ 15, 0 }, { 10, 10 }), Body::makeCircle({ 0, 0 }, 10));
-    check(manifold.colliding && manifold.normal.x < -0.9f, "box-circle (reversed order): normal flips");
+    check(manifold.colliding && manifold.normal.x < -0.9f, "box-circle (reversed order):normal flips");
 
     check(testCollision(Body::makeBox({ 0, 0 }, { 10, 10 }), Body::makeBox({ 15, 0 }, { 10, 10 })).colliding,
           "box-box overlap");
@@ -161,7 +161,7 @@ static void testNarrowPhase() {
 
     Body floor = Body::makeBox({ 640, 700 }, { 640, 20 }, 0.0f);
     manifold = testCollision(Body::makeCircle({ 200, 685 }, 20), floor);
-    check(manifold.colliding && manifold.normal.y > 0.9f, "circle centre inside floor resolves upward");
+    check(manifold.colliding && manifold.normal.y > 0.9f, "circle centre inside floor resolvesupward");
 }
 
 static void testResponse() {
@@ -798,7 +798,7 @@ int main() {
     testSceneFiles();
 
     std::cout << "\n----------------------------------------\n";
-    std::cout << "Passed: " << passed << "   Failed: " << failed << "\n";
+    std::cout << "Passed: " << passed << "  Failed: " << failed << "\n";
     std::cout << (failed == 0 ? "ALL TESTS PASSED\n" : "SOME TESTS FAILED\n");
     return failed == 0 ? 0 : 1;
 }

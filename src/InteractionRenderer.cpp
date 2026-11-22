@@ -250,15 +250,15 @@ void drawStatus(sf::RenderWindow& window, const sf::Font& font,
     status << "  Up/Down: angle  Left/Right: speed   +/-: mass\n";
     status << "  Hold Shift for fine control\n";
 
-    status << "\n=== SELECT &    EDIT ===\n";
-    status << "  Click body:  select (loads values)     Enter: apply   Del: remove\n";
-    status << "  Drag body:   move it, release to drop\n";
+    status << "\n=== SELECT &  EDIT ===\n";
+    status << "  Click body: select (loads values)  Enter: apply   Del: remove\n";
+    status << "  Drag body:  move it, release to drop\n";
 
-    status << "\n=== FRICTION ===\n";
-    status << "  [ / ]: decrease / increase friction (Shift: fine)\n";
+    status << "\n===FRICTION ===\n";
+    status << "  [ / ]: decrease /increase friction (Shift: fine)\n";
 
     status << "\n=== SHAPES (1-3) ===\n";
-    status << "  1: Circle  2: Triangle  3: Square\n";
+    status << " 1: Circle  2:Triangle  3:Square\n";
 
     status << "\n=== PRESETS (F1-F4) ===\n";
     status << "  F1 Projectile F2 Elastic F3 Inelastic  F4 Free fall\n";
@@ -674,118 +674,4 @@ bool loadScene(WorldState& worldState, const std::string& filename) {
     loadedWorldState.bodies.push_back(body);
   }
 
-  // Optional sections; files without them still load with defaults
-  std::string sectionTag;
-  while (file >> sectionTag) {
-    if (sectionTag == "springs") {
-      int springCount = 0;
-      file >> springCount;
-      if (!file || springCount < 0) return false;
-
-      for (int springIndex = 0; springIndex < springCount; ++springIndex) {
-        int firstBodyIndex = 0, secondBodyIndex = 0;
-        float restLength = 0.0f, stiffness = 0.0f, damping = 0.0f;
-        file >> firstBodyIndex >> secondBodyIndex >> restLength >> stiffness >> damping;
-        if (!file) return false;
-
-        SpringForce spring(firstBodyIndex, secondBodyIndex, restLength, stiffness, damping);
-        if (!spring.connects(loadedWorldState.bodies.size())) return false;
-        loadedWorldState.springs.push_back(spring);
-      }
-    }
-    else if (sectionTag == "settings") {
-      int dragEnabled = 1;
-      file >> loadedWorldState.settings.restitution >>
-        loadedWorldState.settings.friction >> dragEnabled;
-      if (!file) return false;
-      loadedWorldState.settings.dragEnabled = (dragEnabled != 0);
-    }
-    else {
-      return false; // unknown section: treat the file as damaged
-    }
-  }
-
-  worldState = std::move(loadedWorldState);
-  return true;
-}
-
-// Font and main loop
-
-bool loadFont(sf::Font& font) {
-  // Bundled font first, then common system locations on Windows, Linux and macOS
-  const char* fontPaths[] = {
-    "arial.ttf",
-    "C:/Windows/Fonts/arial.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/Library/Fonts/Arial.ttf",
-    "/System/Library/Fonts/Supplemental/Arial.ttf"
-  };
-
-  for (const char* fontPath : fontPaths) {
-#if SFML_VERSION_MAJOR >= 3
-  if (font.openFromFile(fontPath)) return true;
-#else
-  if (font.loadFromFile(fontPath)) return true;
-#endif
-  }
-  return false;
-}
-
-int run() {
-  const unsigned int windowWidth = 1280;
-  const unsigned int windowHeight = 720;
-  const std::string title = "ForceForge - Interactive Physics Sandbox";
-
-#if SFML_VERSION_MAJOR >= 3
-  sf::RenderWindow window(sf::VideoMode({ windowWidth, windowHeight }), title);
-#else
-  sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), title);
-#endif
-  window.setFramerateLimit(60);
-
-  sf::Font font;
-  if (!loadFont(font)) {
-    std::cerr << "Could not load a font. Place arial.ttf next to the executable.\n";
-    return -1;
-  }
-
-  World world(static_cast<float>(windowWidth), static_cast<float>(windowHeight));
-  EventQueue queue;
-  AppSettings settings;
-  sf::Clock clock;
-
-  while (window.isOpen()) {
-    // 1. Input becomes queued events or frontend setting changes
-    for (const RawInput& input : pollInput(window)) {
-      handleInput(input, world, queue, settings, window);
-    }
-    // 2. Scene changes are applied in arrival order, all at once
-    world.processEvents(queue);
-    // 3. A dragged body follows the mouse
-    if (settings.dragging) {
-      world.dragBody(settings.draggedBodyIndex, settings.dragTarget);
-    }
-    // 4. Physics, in fixed steps (restart() is called even when paused,
-    // so un-pausing does not produce one huge step)
-    float frameTime = clock.restart().asSeconds();
-    if (!settings.paused) world.update(frameTime);
-// 5. Drawing: springs underneath, then bodies, then the overlay text
-    window.clear(sf::Color(20, 22, 30));
-for (const SpringForce& spring : world.getSprings()) {
-      drawSpring(window, spring, world.getBodies());
-    }
-
-    for (const Body& body : world.getBodies()) {
-      drawBody(window, body);
-      if (body.isStatic()) continue;
-      if (settings.showVelocityVectors) drawVelocityVector(window, body);
-      if (settings.showBodyInfo) drawBodyInfo(window, body, font);
-    }
-    if (hasValidSelection(world, settings)) {
-      drawSelection(window, world.getBodies()[settings.selectedBodyIndex]);
-    }
- drawStatus(window, font, settings, world);
-    window.display();
-  }
-return 0;
-}} // namespace sandbox 
+ 
