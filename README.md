@@ -41,11 +41,11 @@ Tests: All 123 automated checks pass.
 
 | Member | Completed work |
 
-| **Pranjal Negi** | Narrow-phase detection (circle-circle, circle-box, box-box, SAT polygon); spatial hash-grid broad phase; `CollisionSystem::step`; presets F1 to F4 (projectile, elastic, inelastic, free fall); launcher helpers |
-| **Dilasha Rawat** | `ForceGenerator` hierarchy (gravity, drag, spring); semi-implicit and explicit Euler integration; impulse response (restitution, friction); undo/redo stacks; event queue |
-| **Akshit Chhabra** | `Vector2D` math (length, normalise, dot, cross); `Body` data type supporting circle, box and polygon shapes; `World` class with fixed 1/60 s timestep, body picking and dragging, and the simulation loop |
-| **Rishabh Jakhmola** | SFML window, rendering and input handling; launcher (mass, speed, angle); click-and-drag selection with on-screen info; controls list; scene save/load; `main.cpp`; support for SFML 3 |
-| **Whole team** | Automated test suite (123 checks in 15 sections, all passing); README; VS Code build, run and test tasks |
+| Pranjal Negi | Narrow-phase detection (circle-circle, circle-box, box-box, SAT polygon); spatial hash-grid broad phase; `CollisionSystem::step`; presets F1 to F4 (projectile, elastic, inelastic, free fall); launcher helpers; live friction control (`[` / `]` keys) |
+| Dilasha Rawat | `ForceGenerator` hierarchy (gravity, drag, spring); semi-implicit and explicit Euler integration; impulse response (restitution, Coulomb friction, position correction, velocity sleep); undo/redo stacks; event queue ,deque; drag boundary handling (`World::dragBody`) |
+| Akshit Chhabra | `Vector2D` math (length, normalise, dot, cross); `Body` data type supporting circle, box and polygon shapes; `World` class with fixed 1/60 s timestep, body picking and dragging, and the simulation loop |
+| Rishabh Jakhmola | SFML window, rendering and input handling; launcher (mass, speed, angle); body selection with on-screen velocity vectors and body info; drag input (mouse-move tracking, 4-pixel threshold); controls list;  (not bound to a key); `main.cpp`; support for SFML 2.6 and 3 |
+| Whole team | Automated test suite ([N] checks in 15 sections, all passing); README |
 
 **Tools/Technologies Used**
 
@@ -56,7 +56,7 @@ Tests: All 123 automated checks pass.
 
 **Installation & Setup**
 
-Prerequisites: A C++17 compiler with standard-library support for `std::clamp`, and SFML 3.0 installed for that same compiler toolchain. On Windows with MSYS2, install `mingw-w64-ucrt-x86_64-sfml` and use the UCRT64 compiler and terminal for the commands below. MinGW.org GCC 6.3 is too old and cannot use the UCRT64 SFML installation.
+Prerequisites: A C++17 compiler and SFML 2.6 or 3.0 should be installed in the system. Then, follow the below instructions to proceed :
 
 1. Download the ZIP from the ForceForge GitHub repo.
 2. Extract it into a folder and open that folder in VS Code.
