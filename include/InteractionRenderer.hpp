@@ -104,4 +104,8 @@ bool saveScene(const WorldState& worldState, const std::string& filename);
 bool loadScene(WorldState& worldState, const std::string& filename);
 // Font frontend and main loop
 bool loadFont(sf::Font& font);
+// Opens the windowand runs until it is closed.
+// Returns 0 on normal exit,-1 if no font could be loaded.
+int run();
+} // namespace sandbox
 
