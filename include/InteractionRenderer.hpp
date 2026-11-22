@@ -1,18 +1,16 @@
 #pragma once
 
-// SFML window, input handling, drawing and scene save/load.
-// Works with SFML 2.6 and SFML 3: the few places where the two
+//SFML window,input handling,drawing and scene save/load.
+// Works withSFML 3: the few places where the two
 // versions differ are selected at compile time with
 // SFML_VERSION_MAJOR. Everything is inside the "sandbox"
 // namespace so these names cannot clash with other code.
-//
 // saveScene / loadScene remain available to code and tests,
 // but no key in the program calls them.
 
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <vector>
-
 #include "EventQueue.hpp"
 #include "Scenarios.hpp"
 #include "World.hpp"
@@ -84,33 +82,3 @@ Body createLaunchedBody(const Vector2D& position, const AppSettings& settings);
 void readBodyIntoSettings(const Body& body, AppSettings& settings);
 
 // Drawing
-sf::Text makeText(const sf::Font& font, const std::string& content, unsigned int characterSize);
-void drawBody(sf::RenderWindow& window, const Body& body);
-void drawVelocityVector(sf::RenderWindow& window, const Body& body);
-void drawBodyInfo(sf::RenderWindow& window, const Body& body, const sf::Font& font);
-void drawSelection(sf::RenderWindow& window, const Body& body);
-void drawLauncher(sf::RenderWindow& window, const AppSettings& settings,
-  const World& world, float gravityAcceleration);
-void drawStatus(sf::RenderWindow& window, const sf::Font& font,
-  const AppSettings& settings, const World& world);
-
-// Input
-// Reads all pending window events and converts them to RawInput
-std::vector<RawInput> pollInput(sf::RenderWindow& window);
-
-// Turns one input into a queued scene change or a frontend setting change
-void handleInput(const RawInput& input, World& world, EventQueue& queue,
-  AppSettings& settings, sf::RenderWindow& window);
-
-// Scene persistence (backend only: not bound to any key)
-bool saveScene(const WorldState& worldState, const std::string& filename);
-bool loadScene(WorldState& worldState, const std::string& filename);
-
-// Font and main loop
-bool loadFont(sf::Font& font);
-
-// Opens the window and runs until it is closed.
-// Returns 0 on normal exit, -1 if no font could be loaded.
-int run();
-
-} // namespace sandbox
