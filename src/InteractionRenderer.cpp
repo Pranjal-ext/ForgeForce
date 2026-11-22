@@ -673,5 +673,40 @@ bool loadScene(WorldState& worldState, const std::string& filename) {
 
     loadedWorldState.bodies.push_back(body);
   }
+// Optional sections; files without them still load with defaults
+  std::string sectionTag;
+  while (file >> sectionTag) {
+    if (sectionTag == "springs") {
+      int springCount = 0;
+      file >> springCount;
+      if (!file || springCount < 0) return false;
+
+      for (int springIndex = 0; springIndex < springCount; ++springIndex) {
+        int firstBodyIndex = 0, secondBodyIndex = 0;
+        float restLength = 0.0f, stiffness = 0.0f, damping = 0.0f;
+        file >> firstBodyIndex >> secondBodyIndex >> restLength >> stiffness >> damping;
+        if (!file) return false;
+
+        SpringForce spring(firstBodyIndex, secondBodyIndex, restLength, stiffness, damping);
+        if (!spring.connects(loadedWorldState.bodies.size())) return false;
+        loadedWorldState.springs.push_back(spring);
+      }
+    }
+    else if (sectionTag == "settings") {
+      int dragEnabled = 1;
+      file >> loadedWorldState.settings.restitution >>
+        loadedWorldState.settings.friction >> dragEnabled;
+      if (!file) return false;
+      loadedWorldState.settings.dragEnabled = (dragEnabled != 0);
+    }
+    else {
+      return false; // unknown section: treat the file as damaged
+    }
+  }
+
+  worldState = std::move(loadedWorldState);
+  return true;
+}
+
 
  
