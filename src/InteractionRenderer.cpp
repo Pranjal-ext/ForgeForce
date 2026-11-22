@@ -241,7 +241,19 @@ void drawStatus(sf::RenderWindow& window, const sf::Font& font,
     << "   Redo: " << world.getHistory().redoCount() << "\n";
   if (!settings.message.empty()) status << settings.message << "\n";
 
- 
+  // SHOW INSTRUCTIONS ONLY IF TOGGLED ON
+  if (settings.showInstructions) {
+    status << "\n===FIRE & SPAWN===\n";
+    status << "  Space: Fire from launcher Click empty space: Spawn\n";
+
+    status << "\n=== ADJUST VALUES ===\n";
+    status << "  Up/Down: angle  Left/Right: speed +/-: mass\n";
+    status << "  Hold Shift for fine control\n";
+
+    status << "\n=== SELECT &  EDIT ===\n";
+    status << "  Click body:select (loads values)  Enter: apply Del: remove\n";
+    status << "  Drag body: move it,release to drop\n";
+
 // Input#code
 
 #if SFML_VERSION_MAJOR >= 3
