@@ -92,3 +92,10 @@ void drawLauncher(sf::RenderWindow& window, const AppSettings& settings,
 void drawStatus(sf::RenderWindow& window, const sf::Font& font,
   const AppSettings& settings, const World& world);
 
+// Input from keyboard
+// Reads all pending window events and convert them to RawInput
+std::vector<RawInput> pollInput(sf::RenderWindow& window);
+
+// Turns one input into a queued scene change or a frontend setting changes
+void handleInput(const RawInput& input, World& world, EventQueue& queue,
+  AppSettings& settings, sf::RenderWindow& window);
