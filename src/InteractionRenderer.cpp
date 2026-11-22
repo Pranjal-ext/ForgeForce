@@ -728,6 +728,63 @@ bool loadFont(sf::Font& font) {
   }
   return false;
 }
+int run() {
+  const unsigned int windowWidth = 1280;
+  const unsigned int windowHeight = 720;
+  const std::string title = "ForceForge - Interactive Physics Sandbox";
 
+#if SFML_VERSION_MAJOR >= 3
+  sf::RenderWindow window(sf::VideoMode({ windowWidth, windowHeight }), title);
+#else
+  sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), title);
+#endif
+  window.setFramerateLimit(60);
+
+  sf::Font font;
+  if (!loadFont(font)) {
+    std::cerr << "Could not load a font. Place arial.ttf next to the executable.\n";
+    return -1;
+  }
+
+  World world(static_cast<float>(windowWidth), static_cast<float>(windowHeight));
+  EventQueue queue;
+  AppSettings settings;
+  sf::Clock clock;
+
+  while (window.isOpen()) {
+    // 1. Input becomes queued events or frontend setting changes
+    for (const RawInput& input : pollInput(window)) {
+      handleInput(input, world, queue, settings, window);
+    }
+    // 2. Scene changes are applied in arrival order, all at once
+    world.processEvents(queue);
+    // 3. A dragged body follows the mouse
+    if (settings.dragging) {
+      world.dragBody(settings.draggedBodyIndex, settings.dragTarget);
+    }
+    // 4. Physics, in fixed steps (restart() is called even when paused,
+    // so un-pausing does not produce one huge step)
+    float frameTime = clock.restart().asSeconds();
+    if (!settings.paused) world.update(frameTime);
+// 5. Drawing: springs underneath, then bodies, then the overlay text
+    window.clear(sf::Color(20, 22, 30));
+for (const SpringForce& spring : world.getSprings()) {
+      drawSpring(window, spring, world.getBodies());
+    }
+
+    for (const Body& body : world.getBodies()) {
+      drawBody(window, body);
+      if (body.isStatic()) continue;
+      if (settings.showVelocityVectors) drawVelocityVector(window, body);
+      if (settings.showBodyInfo) drawBodyInfo(window, body, font);
+    }
+    if (hasValidSelection(world, settings)) {
+      drawSelection(window, world.getBodies()[settings.selectedBodyIndex]);
+    }
+ drawStatus(window, font, settings, world);
+    window.display();
+  }
+return 0;
+}} // namespace sandbox 
 
  
