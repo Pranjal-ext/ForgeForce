@@ -707,6 +707,27 @@ bool loadScene(WorldState& worldState, const std::string& filename) {
   worldState = std::move(loadedWorldState);
   return true;
 }
+// Font and main loop
+
+bool loadFont(sf::Font& font) {
+  // Bundled font first, then common system locations on Windows, Linux and macOS
+  const char* fontPaths[] = {
+    "arial.ttf",
+    "C:/Windows/Fonts/arial.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/Library/Fonts/Arial.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf"
+  };
+
+  for (const char* fontPath : fontPaths) {
+#if SFML_VERSION_MAJOR >= 3
+  if (font.openFromFile(fontPath)) return true;
+#else
+  if (font.loadFromFile(fontPath)) return true;
+#endif
+  }
+  return false;
+}
 
 
  
