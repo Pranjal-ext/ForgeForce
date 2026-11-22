@@ -268,6 +268,10 @@ void drawStatus(sf::RenderWindow& window, const sf::Font& font,
   } else {
     status << "\n Press H for instructions";
   }
+ sf::Text text = makeText(font, status.str(), 14);
+  text.setPosition(sf::Vector2f(WALL_THICKNESS + 12.0f, 12.0f));
+  window.draw(text);
+}
 
 
 
