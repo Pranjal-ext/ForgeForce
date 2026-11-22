@@ -82,3 +82,13 @@ Body createLaunchedBody(const Vector2D& position, const AppSettings& settings);
 void readBodyIntoSettings(const Body& body, AppSettings& settings);
 
 // Drawing
+sf::Text makeText(const sf::Font& font, const std::string& content, unsigned int characterSize);
+void drawBody(sf::RenderWindow& window, const Body& body);
+void drawVelocityVector(sf::RenderWindow& window, const Body& body);
+void drawBodyInfo(sf::RenderWindow& window, const Body& body, const sf::Font& font);
+void drawSelection(sf::RenderWindow& window, const Body& body);
+void drawLauncher(sf::RenderWindow& window, const AppSettings& settings,
+  const World& world, float gravityAcceleration);
+void drawStatus(sf::RenderWindow& window, const sf::Font& font,
+  const AppSettings& settings, const World& world);
+
