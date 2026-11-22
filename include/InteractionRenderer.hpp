@@ -99,3 +99,9 @@ std::vector<RawInput> pollInput(sf::RenderWindow& window);
 // Turns one input into a queued scene change or a frontend setting changes
 void handleInput(const RawInput& input, World& world, EventQueue& queue,
   AppSettings& settings, sf::RenderWindow& window);
+  // Scene (backend only: not bound to any key)
+bool saveScene(const WorldState& worldState, const std::string& filename);
+bool loadScene(WorldState& worldState, const std::string& filename);
+// Font frontend and main loop
+bool loadFont(sf::Font& font);
+
