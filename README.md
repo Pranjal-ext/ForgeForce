@@ -1,6 +1,6 @@
 **ForceForge: An Interactive 2D Newtonian Physics Simulation Sandbox**
 
-ForceForge is an interactive 2D physics sandbox built in C++17 with SFML. Students create particles, circles and boxes, adjust mass, velocity, friction, bounciness and gravity, and watch collisions, momentum and projectile motion play out in real time, with on-screen vectors and live values. It is designed as a visual teaching tool, so learners see what the formulas actually do.
+ForceForge is an interactive 2D Newtonian physics simulation sandbox built in C++17 with SFML. Students create particles, circles and boxes, adjust mass, velocity, friction, bounciness and gravity, and watch collisions, momentum and projectile motion play out in real time, with on-screen vectors and live values. It is designed as a visual teaching tool, so learners see what the formulas actually do.
 
 **Problem Statement**
 
@@ -25,13 +25,17 @@ Physics is usually taught through formulas and static diagrams, so students rare
 
 **Major Features/Modules**
 
-Users can create particles, circles and boxes, adjust their mass, velocity, friction, bounciness and gravity, and see force vectors and live values on screen. The engine is built around a `Body` class hierarchy (`Particle`, `Circle`, `Box`), force generators for gravity, friction, drag and springs, and a collision system with broad- and narrow-phase detection and impulse-based response. User and simulation events are processed through a queue, undo/redo uses stacks, and SFML handles rendering and input.
+Users can fire projectiles from a launcher, spawn circles, triangles and squares, drag bodies with the mouse, and set the mass, speed and launch angle of the launcher or of any selected body. Friction can be changed live with the [ and ] keys. On screen, ForceForge shows velocity vectors and each body's mass and speed. Four presets (F1–F4) demonstrate projectile motion, elastic and inelastic collisions, and free fall.
+
+The engine is built around a Body data type whose ShapeType is Circle, Box or Polygon. Forces come from an abstract ForceGenerator class with GravityForce, DragForce and SpringForce subclasses, used through base-class pointers. Bodies move by semi-implicit Euler integration in fixed 1/60 s steps. Collisions use a spatial hash grid for the broad phase, exact shape tests (SAT for polygons) for the narrow phase, and impulse-based response with restitution, Coulomb friction and position correction. Every scene change passes through a FIFO event queue. Undo/redo keeps two stacks of scene snapshots. SFML handles rendering and input.
 
 **Current Project Status**
 
-**Phase:** Phase II complete; Phase III in progress.
+**Phase**: Phase III complete. The project is ready for the final demonstration.
 
-**Overall progress:** About 75% of the planned work is complete (team estimate, covering Month 1 and almost all of Month 2). The core engine works: object model, simulation loop, forces, integration, collision detection and response, presets, interface and tests. All 123 automated checks pass.
+Status: All planned modules are finished and integrated: the object model, the fixed-step simulation loop, gravity, drag and spring forces, semi-implicit Euler integration, collision detection (spatial hash grid and SAT) and impulse-based response, presets F1–F4, the launcher, undo/redo, the event queue, the SFML interface, and the test suite. Phase III added drag-and-drop with wall and floor clamping, and live friction control with the [ and ] keys. The quadtree broad phase and per-body restitution planned in Phase II were dropped in favour of these features.
+
+Tests: All 123 automated checks pass.
 
 **Completed**
 
