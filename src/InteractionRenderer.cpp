@@ -243,37 +243,37 @@ void drawStatus(sf::RenderWindow& window, const sf::Font& font,
 
   // SHOW INSTRUCTIONS ONLY IF TOGGLED ON
   if (settings.showInstructions) {
-    status << "\n=== FIRE & SPAWN ===\n";
+    status << "\n===FIRE &SPAWN===\n";
     status << "  Space: Fire from launcher Click empty space: Spawn\n";
 
     status << "\n=== ADJUST VALUES ===\n";
-    status << "  Up/Down: angle  Left/Right: speed   +/-: mass\n";
+    status << "  Up/Down: angle Left/Right: speed +/-: mass\n";
     status << "  Hold Shift for fine control\n";
 
-    status << "\n=== SELECT &    EDIT ===\n";
-    status << "  Click body:  select (loads values)     Enter: apply   Del: remove\n";
-    status << "  Drag body:   move it, release to drop\n";
-
-    status << "\n=== FRICTION ===\n";
-    status << "  [ / ]: decrease / increase friction (Shift: fine)\n";
+    status << "\n=== SELECT &  EDIT ===\n";
+    status << "  Click body:select (loads values)  Enter: apply Del:remove\n";
+    status << "  Drag body: move it,release to drop\n";
+     status << "\n===FRICTION ===\n";
+    status << "  [ / ]: decrease /increase friction (Shift: fine)\n";
 
     status << "\n=== SHAPES (1-3) ===\n";
-    status << "  1: Circle  2: Triangle  3: Square\n";
+    status << " 1: Circle  2:Triangle  3:Square\n";
 
     status << "\n=== PRESETS (F1-F4) ===\n";
-    status << "  F1 Projectile F2 Elastic F3 Inelastic  F4 Free fall\n";
+    status << "  F1 Projectile F2-Elastic F3-Inelastic  F4-Free fall\n";
 
     status << "\n=== CONTROL ===\n";
     status << "  P: Pause  R: Reset  V: Vectors   I: Info   H: Help (toggle)\n";
-    status << "  Ctrl+Z/Y:  Undo/Redo  Esc:  Exit\n";
+    status << "  Ctrl+Z/Y: Undo/Redo  Esc:  Exit\n";
   } else {
     status << "\n Press H for instructions";
   }
-
-  sf::Text text = makeText(font, status.str(), 14);
+ sf::Text text = makeText(font, status.str(), 14);
   text.setPosition(sf::Vector2f(WALL_THICKNESS + 12.0f, 12.0f));
   window.draw(text);
 }
+
+
 
 // Input#code
 
@@ -673,8 +673,7 @@ bool loadScene(WorldState& worldState, const std::string& filename) {
 
     loadedWorldState.bodies.push_back(body);
   }
-
-  // Optional sections; files without them still load with defaults
+// Optional sections; files without them still load with defaults
   std::string sectionTag;
   while (file >> sectionTag) {
     if (sectionTag == "springs") {
@@ -708,7 +707,6 @@ bool loadScene(WorldState& worldState, const std::string& filename) {
   worldState = std::move(loadedWorldState);
   return true;
 }
-
 // Font and main loop
 
 bool loadFont(sf::Font& font) {
@@ -730,7 +728,6 @@ bool loadFont(sf::Font& font) {
   }
   return false;
 }
-
 int run() {
   const unsigned int windowWidth = 1280;
   const unsigned int windowHeight = 720;
@@ -789,3 +786,5 @@ for (const SpringForce& spring : world.getSprings()) {
   }
 return 0;
 }} // namespace sandbox 
+
+ 
